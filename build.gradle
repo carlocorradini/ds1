@@ -1,27 +1,31 @@
-apply plugin: 'java'
-apply plugin: 'application'
+apply {
+    plugin 'java'
+    plugin 'scala'
+    plugin 'application'
+    plugin 'idea'
+}
 
+idea {
+    module {
+        downloadJavadoc = true
+    }
+}
+
+mainClassName = 'it.unitn.disi.ds1.Main'
 
 repositories {
     mavenCentral()
     mavenLocal()
 }
 
-def versions = [
-    ScalaBinary: "2.13"
-]
-
 dependencies {
-    implementation platform("com.typesafe.akka:akka-bom_${versions.ScalaBinary}:2.6.13")
-
-    implementation "com.typesafe.akka:akka-actor_${versions.ScalaBinary}"
-    testImplementation "com.typesafe.akka:akka-testkit_${versions.ScalaBinary}"
+    implementation platform("com.typesafe.akka:akka-bom_2.13:2.6.13")
+    implementation "com.typesafe.akka:akka-actor_2.13"
 }
 
 compileJava {
     options.compilerArgs += ["-Xlint:deprecation"]
 }
-mainClassName = "it.unitn.ds1.Main"
 
 run {
     standardInput = System.in
