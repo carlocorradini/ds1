@@ -17,7 +17,7 @@ public final class Server extends AbstractActor {
         this.dataStore = new HashMap<>();
 
         // Initialize server data
-        IntStream.range(id * 10, (id * 10) + 10).forEach(i -> dataStore.put(i, new Item()));
+        IntStream.range(serverId * 10, (serverId * 10) + 10).forEach(i -> dataStore.put(i, new Item()));
         System.out.println(this.dataStore);
     }
 
@@ -30,13 +30,13 @@ public final class Server extends AbstractActor {
     /*-- Message handlers ----------------------------------------------------- */
 
     private void onReadCoordMsg(ReadCoordMsg msg) {
-        getSender().tell(new ReadResultCoordMsg(msg.transactionId, msg.key, this.dataStore.get(msg.key)), getSelf());
+        getSender().tell(new ReadResultCoordMsg(msg.transactionId, msg.key, this.dataStore.get(msg.key).data), getSelf());
     }
 
     @Override
     public Receive createReceive() {
         return receiveBuilder()
-            .match(ReadCoordMsg.class,  this::onReadCoordMsg)
-            .build();
+                .match(ReadCoordMsg.class, this::onReadCoordMsg)
+                .build();
     }
 }

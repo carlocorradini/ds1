@@ -7,15 +7,14 @@ import java.io.Serializable;
 /**
  * WRITE request from the coordinator to the server.
  */
-public final class WriteCoordMsg implements Serializable {
-    private static final long serialVersionUID = 3L;
+public final class WriteCoordMsg extends TxnMsg implements Serializable {
+    private static final long serialVersionUID = -4823398098700891377L;
 
-    public final UUID transactionId;
     public final int key;
     public final int value;
 
-    public ReadCoordMsg(UUID transactionId, int key, int value) {
-        this.transactionId = transactionId;
+    public WriteCoordMsg(UUID transactionId, int key, int value) {
+        super(transactionId);
         this.key = key;
         this.value = value;
     }

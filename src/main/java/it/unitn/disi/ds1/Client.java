@@ -7,7 +7,7 @@ import akka.actor.*;
 import it.unitn.disi.ds1.message.*;
 import scala.concurrent.duration.Duration;
 
-public final class TxnClient extends AbstractActor {
+public final class Client extends AbstractActor {
     private static final double COMMIT_PROBABILITY = 0.8;
     private static final double WRITE_PROBABILITY = 0.5;
     private static final int MIN_TXN_LENGTH = 20;
@@ -25,25 +25,27 @@ public final class TxnClient extends AbstractActor {
     private int numCommittedTxn;
 
     // TXN operation (move some amount from a value to another)
-    private boolean acceptedTxn;
-    private ActorRef currentCoordinator;
+    private boolean txnAccepted;
+    private ActorRef txnCoordinator;
     private int firstKey, secondKey;
     private Integer firstValue, secondValue;
     private int numOpTotal;
     private int numOpDone;
     private Cancellable acceptTimeout;
+    private Optional<UUID> txnId;
 
     private final Random random;
 
-    public TxnClient(int clientId) {
+    public Client(int clientId) {
         this.clientId = clientId;
         this.numAttemptedTxn = 0;
         this.numCommittedTxn = 0;
+        this.txnId = Optional.empty();
         this.random = new Random();
     }
 
     static public Props props(int clientId) {
-        return Props.create(TxnClient.class, () -> new TxnClient(clientId));
+        return Props.create(Client.class, () -> new Client(clientId));
     }
 
     /*-- Actor methods -------------------------------------------------------- */
@@ -57,12 +59,12 @@ public final class TxnClient extends AbstractActor {
             e.printStackTrace();
         }
 
-        acceptedTxn = false;
+        txnAccepted = false;
         numAttemptedTxn++;
 
-        // contact a random coordinator and begin TXN
-        currentCoordinator = coordinators.get(random.nextInt(coordinators.size()));
-        currentCoordinator.tell(new TxnBeginMsg(clientId), getSelf());
+        // Contact a random coordinator and begin TXN
+        txnCoordinator = coordinators.get(random.nextInt(coordinators.size()));
+        txnCoordinator.tell(new TxnBeginMsg(clientId), getSelf());
 
         // how many operations (taking some amount and adding it somewhere else)?
         int numExtraOp = RAND_LENGTH_RANGE > 0 ? random.nextInt(RAND_LENGTH_RANGE) : 0;
@@ -74,20 +76,23 @@ public final class TxnClient extends AbstractActor {
                 Duration.create(500, TimeUnit.MILLISECONDS),
                 getSelf(),
                 new TxnAcceptTimeoutMsg(), // message sent to myself
-                getContext().system().dispatcher(), getSelf()
+                getContext().system().dispatcher(),
+                getSelf()
         );
 
-        System.out.printf("%s BEGIN%n", getSelf().path().name());
+        System.out.printf("%s BEGIN transaction%n", getSelf().path().name());
     }
 
     // end the current TXN sending TxnEndMsg to the coordinator
     void endTxn() {
         boolean doCommit = random.nextDouble() < COMMIT_PROBABILITY;
-        currentCoordinator.tell(new TxnEndMsg(clientId, doCommit), getSelf());
+        txnCoordinator.tell(new TxnEndMsg(txnId.orElseThrow(), clientId, doCommit), getSelf());
+
+        System.out.printf("%s END transaction %s%n", getSelf().path().name(), txnId.orElseThrow());
+
         firstValue = null;
         secondValue = null;
-
-        System.out.printf("%s END%n", getSelf().path().name());
+        txnId = Optional.empty();
     }
 
     // READ two items (will move some amount from the value of the first to the second)
@@ -98,8 +103,8 @@ public final class TxnClient extends AbstractActor {
         secondKey = (firstKey + randKeyOffset) % (maxKey + 1);
 
         // READ requests
-        currentCoordinator.tell(new ReadMsg(clientId, firstKey), getSelf());
-        currentCoordinator.tell(new ReadMsg(clientId, secondKey), getSelf());
+        txnCoordinator.tell(new ReadMsg(txnId.orElseThrow(), clientId, firstKey), getSelf());
+        txnCoordinator.tell(new ReadMsg(txnId.orElseThrow(), clientId, secondKey), getSelf());
 
         // delete the current read values
         firstValue = null;
@@ -115,8 +120,8 @@ public final class TxnClient extends AbstractActor {
         // take some amount from one value and pass it to the other, then request writes
         Integer amountTaken = 0;
         if (firstValue >= 1) amountTaken = 1 + random.nextInt(firstValue);
-        currentCoordinator.tell(new WriteMsg(clientId, firstKey, firstValue - amountTaken), getSelf());
-        currentCoordinator.tell(new WriteMsg(clientId, secondKey, secondValue + amountTaken), getSelf());
+        txnCoordinator.tell(new WriteMsg(txnId.orElseThrow(), clientId, firstKey, firstValue - amountTaken), getSelf());
+        txnCoordinator.tell(new WriteMsg(txnId.orElseThrow(), clientId, secondKey, secondValue + amountTaken), getSelf());
 
         System.out.printf("%s WRITE #%d taken %d (%d, %d), (%d, %d)%n",
                 getSelf().path().name(), numOpDone, amountTaken, firstKey, (firstValue - amountTaken), secondKey, (secondValue + amountTaken));
@@ -136,13 +141,16 @@ public final class TxnClient extends AbstractActor {
     }
 
     private void onTxnAcceptMsg(TxnAcceptMsg msg) {
-        acceptedTxn = true;
+        txnId = Optional.of(msg.transactionId);
+        txnAccepted = true;
         acceptTimeout.cancel();
-        //readTwo();
+
+        System.out.printf("Transaction accepted by %s with id %s%n", getSender().path().name(), txnId.orElseThrow());
+        readTwo();
     }
 
     private void onTxnAcceptTimeoutMsg(TxnAcceptTimeoutMsg msg) {
-        if (!acceptedTxn) beginTxn();
+        if (!txnAccepted) beginTxn();
     }
 
     private void onReadResultMsg(ReadResultMsg msg) {
@@ -162,6 +170,7 @@ public final class TxnClient extends AbstractActor {
         // check if the transaction should end;
         // otherwise, read two again
         if (opDone) numOpDone++;
+
         if (numOpDone >= numOpTotal) {
             endTxn();
         } else if (opDone) {

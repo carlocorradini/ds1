@@ -3,13 +3,7 @@ package it.unitn.disi.ds1;
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
-import it.unitn.disi.ds1.message.TxnAcceptMsg;
-import it.unitn.disi.ds1.message.TxnBeginMsg;
-import it.unitn.disi.ds1.message.ReadMsg;
-import it.unitn.disi.ds1.message.ReadResultMsg;
-import it.unitn.disi.ds1.message.ReadCoordMsg;
-import it.unitn.disi.ds1.message.ReadResultCoordMsg;
-import it.unitn.disi.ds1.message.WriteMsg;
+import it.unitn.disi.ds1.message.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,12 +13,11 @@ import java.util.UUID;
 
 public final class Coordinator extends AbstractActor {
     private final List<ActorRef> servers;
-    // Store client ID and transaction ID
-    private final HashMap<ActorRef, UUID> clientTxnID;
+    private final HashMap<UUID, ActorRef> transactions;
 
     public Coordinator(List<ActorRef> servers) {
         this.servers = new ArrayList<>(servers);
-        this.clientTxnID = new HashMap<>();
+        this.transactions = new HashMap<>();
     }
 
     static public Props props(List<ActorRef> servers) {
@@ -32,42 +25,37 @@ public final class Coordinator extends AbstractActor {
     }
 
     /*-- Actor methods -------------------------------------------------------- */
+    private ActorRef serverByKey(int key) {
+        return servers.get(key / 10);
+    }
 
     /*-- Message handlers ----------------------------------------------------- */
 
     private void onTxnBeginMsg(TxnBeginMsg msg) {
         final UUID transactionId = UUID.randomUUID();
-        this.clientTxnID.put(getSender(), transactionId);
-        getSender().tell(new TxnAcceptMsg(), getSelf());
+        this.transactions.put(transactionId, getSender());
+        getSender().tell(new TxnAcceptMsg(transactionId), getSelf());
     }
 
     private void onReadMsg(ReadMsg msg) {
-        int index = (int)msg.key / 10;
-        this.servers[index].tell(new ReadCoordMsg(this.clientTxnID.get(getSender()), msg.key), getSelf());
+        serverByKey(msg.key).tell(new ReadCoordMsg(msg.transactionId, msg.key), getSelf());
     }
 
-    // Come forwardare la risposta del server al client che ha fatto la richiesta di READ?
     private void onReadResultCoordMsg(ReadResultCoordMsg msg) {
-        for (Map.Entry me : this.clientTxnID.entrySet()) {
-            if (me.getValue().equals(msg.transactionId)) {
-                me.getKey().tell(new ReadResultMsg(msg.key, msg.value), getSelf());
-                break;
-            }
-        }
+        this.transactions.get(msg.transactionId).tell(new ReadResultMsg(msg.transactionId, msg.key, msg.value), getSelf());
     }
 
     private void onWriteMsg(WriteMsg msg) {
-        int index = (int)msg.key / 10;
-        this.servers[index].tell(new WriteCoordMsg(this.transactionId.get(msg.clientId), msg.key, msg.value), getSelf());
+        serverByKey(msg.key).tell(new WriteCoordMsg(msg.transactionId, msg.key, msg.value), getSelf());
     }
 
     @Override
     public Receive createReceive() {
         return receiveBuilder()
                 .match(TxnBeginMsg.class, this::onTxnBeginMsg)
-                .match(ReadMsg.class,  this::onReadMsg)
-                .match(ReadResultCoordMsg.class,  this::onReadResultCoordMsg)
-                .match(WriteMsg.class,  this::onWriteMsg)
+                .match(ReadMsg.class, this::onReadMsg)
+                .match(ReadResultCoordMsg.class, this::onReadResultCoordMsg)
+                .match(WriteMsg.class, this::onWriteMsg)
                 .build();
     }
 }

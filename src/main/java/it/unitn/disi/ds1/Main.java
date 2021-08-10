@@ -12,7 +12,7 @@ import java.util.stream.IntStream;
 public final class Main {
     private final static int N_COORDINATORS = 2;
     private final static int N_SERVERS = 3;
-    private final static int N_CLIENTS = 5;
+    private final static int N_CLIENTS = 1;
     private final static int MAX_ITEM = 29;
 
     public static void main(String[] args) {
@@ -22,7 +22,7 @@ public final class Main {
         final List<ActorRef> clients = new ArrayList<>(N_CLIENTS);
 
         // Create actor system
-        system = ActorSystem.create("helloakka");
+        system = ActorSystem.create("banky");
 
         // Create servers
         IntStream.range(0, N_SERVERS).forEach(i -> servers.add(system.actorOf(Server.props(i), String.format("Server-%d", i))));
@@ -31,7 +31,7 @@ public final class Main {
         IntStream.range(0, N_COORDINATORS).forEach(i -> coords.add(system.actorOf(Coordinator.props(servers), String.format("Coordinator-%d", i))));
 
         // Create clients
-        IntStream.range(0, N_CLIENTS).forEach(i -> clients.add(system.actorOf(TxnClient.props(i), String.format("Client-%d", i))));
+        IntStream.range(0, N_CLIENTS).forEach(i -> clients.add(system.actorOf(Client.props(i), String.format("Client-%d", i))));
 
         // Send welcome message to clients from coordinators
         WelcomeMsg welcome = new WelcomeMsg(MAX_ITEM, coords);
