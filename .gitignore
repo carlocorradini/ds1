@@ -1,3 +1,4 @@
 # ignore .gradle and build
 .gradle
 build
+.idea
