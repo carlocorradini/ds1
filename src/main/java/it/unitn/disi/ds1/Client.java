@@ -85,7 +85,8 @@ public final class Client extends AbstractActor {
 
     // end the current TXN sending TxnEndMsg to the coordinator
     void endTxn() {
-        boolean doCommit = random.nextDouble() < COMMIT_PROBABILITY;
+        //boolean doCommit = random.nextDouble() < COMMIT_PROBABILITY;
+        boolean doCommit = false;
         txnCoordinator.tell(new TxnEndMsg(txnId.orElseThrow(NullPointerException::new), clientId, doCommit), getSelf());
 
         System.out.printf("%s END transaction %s%n", getSelf().path().name(), txnId.orElseThrow(NullPointerException::new));

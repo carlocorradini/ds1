@@ -18,6 +18,6 @@ public final class Item {
 
     @Override
     public String toString() {
-        return String.format("[version: %d, data: %s]", version, data);
+        return String.format("[version: %d, data: %d]", version, data);
     }
 }

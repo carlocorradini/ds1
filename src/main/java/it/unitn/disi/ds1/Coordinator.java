@@ -7,7 +7,6 @@ import it.unitn.disi.ds1.message.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.List;
 import java.util.UUID;
 
@@ -49,6 +48,14 @@ public final class Coordinator extends AbstractActor {
         serverByKey(msg.key).tell(new WriteCoordMsg(msg.transactionId, msg.key, msg.value), getSelf());
     }
 
+    private void onTxnEndMsg(TxnEndMsg msg) {
+        this.servers.forEach(i -> i.tell(new RequestMsg(msg.transactionId, msg.commit), getSelf()));
+    }
+
+    private void onResponseMsg(ResponseMsg msg) {
+        // TODO: store server decisions
+    }
+
     @Override
     public Receive createReceive() {
         return receiveBuilder()
@@ -56,6 +63,8 @@ public final class Coordinator extends AbstractActor {
                 .match(ReadMsg.class, this::onReadMsg)
                 .match(ReadResultCoordMsg.class, this::onReadResultCoordMsg)
                 .match(WriteMsg.class, this::onWriteMsg)
+                .match(TxnEndMsg.class, this::onTxnEndMsg)
+                .match(ResponseMsg.class, this::onResponseMsg)
                 .build();
     }
 }
