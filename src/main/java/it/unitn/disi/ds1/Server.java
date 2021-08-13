@@ -18,7 +18,7 @@ public final class Server extends AbstractActor {
 
         // Initialize server data
         IntStream.range(serverId * 10, (serverId * 10) + 10).forEach(i -> dataStore.put(i, new Item()));
-        System.out.println(this.dataStore);
+        // System.out.println(this.dataStore);
     }
 
     public static Props props(int id) {

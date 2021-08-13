@@ -86,9 +86,9 @@ public final class Client extends AbstractActor {
     // end the current TXN sending TxnEndMsg to the coordinator
     void endTxn() {
         boolean doCommit = random.nextDouble() < COMMIT_PROBABILITY;
-        txnCoordinator.tell(new TxnEndMsg(txnId.orElseThrow(), clientId, doCommit), getSelf());
+        txnCoordinator.tell(new TxnEndMsg(txnId.orElseThrow(NullPointerException::new), clientId, doCommit), getSelf());
 
-        System.out.printf("%s END transaction %s%n", getSelf().path().name(), txnId.orElseThrow());
+        System.out.printf("%s END transaction %s%n", getSelf().path().name(), txnId.orElseThrow(NullPointerException::new));
 
         firstValue = null;
         secondValue = null;
@@ -103,8 +103,8 @@ public final class Client extends AbstractActor {
         secondKey = (firstKey + randKeyOffset) % (maxKey + 1);
 
         // READ requests
-        txnCoordinator.tell(new ReadMsg(txnId.orElseThrow(), clientId, firstKey), getSelf());
-        txnCoordinator.tell(new ReadMsg(txnId.orElseThrow(), clientId, secondKey), getSelf());
+        txnCoordinator.tell(new ReadMsg(txnId.orElseThrow(NullPointerException::new), clientId, firstKey), getSelf());
+        txnCoordinator.tell(new ReadMsg(txnId.orElseThrow(NullPointerException::new), clientId, secondKey), getSelf());
 
         // delete the current read values
         firstValue = null;
@@ -120,8 +120,8 @@ public final class Client extends AbstractActor {
         // take some amount from one value and pass it to the other, then request writes
         Integer amountTaken = 0;
         if (firstValue >= 1) amountTaken = 1 + random.nextInt(firstValue);
-        txnCoordinator.tell(new WriteMsg(txnId.orElseThrow(), clientId, firstKey, firstValue - amountTaken), getSelf());
-        txnCoordinator.tell(new WriteMsg(txnId.orElseThrow(), clientId, secondKey, secondValue + amountTaken), getSelf());
+        txnCoordinator.tell(new WriteMsg(txnId.orElseThrow(NullPointerException::new), clientId, firstKey, firstValue - amountTaken), getSelf());
+        txnCoordinator.tell(new WriteMsg(txnId.orElseThrow(NullPointerException::new), clientId, secondKey, secondValue + amountTaken), getSelf());
 
         System.out.printf("%s WRITE #%d taken %d (%d, %d), (%d, %d)%n",
                 getSelf().path().name(), numOpDone, amountTaken, firstKey, (firstValue - amountTaken), secondKey, (secondValue + amountTaken));
@@ -131,7 +131,7 @@ public final class Client extends AbstractActor {
 
     private void onWelcomeMsg(WelcomeMsg msg) {
         this.coordinators = msg.coordinators;
-        //System.out.println(coordinators);
+        System.out.println(coordinators);
         this.maxKey = msg.maxKey;
         beginTxn();
     }
@@ -145,7 +145,7 @@ public final class Client extends AbstractActor {
         txnAccepted = true;
         acceptTimeout.cancel();
 
-        System.out.printf("Transaction accepted by %s with id %s%n", getSender().path().name(), txnId.orElseThrow());
+        System.out.printf("Transaction accepted by %s with id %s%n", getSender().path().name(), txnId.orElseThrow(NullPointerException::new));
         readTwo();
     }
 
