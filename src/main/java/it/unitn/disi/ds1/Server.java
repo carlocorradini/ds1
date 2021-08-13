@@ -8,10 +8,12 @@ import java.util.*;
 import java.util.stream.IntStream;
 
 public final class Server extends AbstractActor {
+    private final int serverId;
     private final HashMap<Integer, Item> dataStore;
     private final List<WriteRequest> workspace; //Better data structure Hashmap<UUID, ArrayList<WriteRequest>>?
 
     public Server(int serverId) {
+        this.serverId = serverId;
         this.dataStore = new HashMap<>();
         this.workspace = new ArrayList<>();
 
@@ -47,7 +49,7 @@ public final class Server extends AbstractActor {
     }
 
     private void onDecisionMsg(RequestMsg msg) {
-        if (msg.doCommit) {
+        if (msg.decision) {
             // Return to coordinator Yes or No
             getSender().tell(new ResponseMsg(msg.transactionId, checkVersion(msg.transactionId)), getSender());
         } else {
