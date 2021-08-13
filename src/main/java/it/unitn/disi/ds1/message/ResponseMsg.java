@@ -4,16 +4,13 @@ import java.io.Serializable;
 import java.util.UUID;
 
 /**
- * Message from Coordinator to Servers to ask for committing or not
+ * Reply from Servers to Coordinator with Yes or No decision
  */
 
-public final class ResponseMsg extends TxnMsg implements Serializable {
+public final class ResponseMsg extends TxnComMsg implements Serializable {
     private static final long serialVersionUID = 4917833122149828262L;
 
-    public final Boolean yesOrNo;
-
-    public ResponseMsg(UUID transactionId, Boolean yesOrNo) {
-        super(transactionId);
-        this.yesOrNo = yesOrNo;
+    public ResponseMsg(UUID transactionId, boolean decision) {
+        super(transactionId, decision);
     }
 }
