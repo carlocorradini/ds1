@@ -13,10 +13,12 @@ import java.util.UUID;
 public final class Coordinator extends AbstractActor {
     private final List<ActorRef> servers;
     private final HashMap<UUID, ActorRef> transactions;
+    private final List<Boolean> decisions;
 
     public Coordinator(List<ActorRef> servers) {
         this.servers = new ArrayList<>(servers);
         this.transactions = new HashMap<>();
+        this.decisions = new ArrayList<>();
     }
 
     static public Props props(List<ActorRef> servers) {
@@ -26,6 +28,15 @@ public final class Coordinator extends AbstractActor {
     /*-- Actor methods -------------------------------------------------------- */
     private ActorRef serverByKey(int key) {
         return servers.get(key / 10);
+    }
+
+    private boolean checkCommit() {
+        for (Boolean decision : this.decisions) {
+            if (!decision) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /*-- Message handlers ----------------------------------------------------- */
@@ -49,11 +60,26 @@ public final class Coordinator extends AbstractActor {
     }
 
     private void onTxnEndMsg(TxnEndMsg msg) {
+        System.out.printf("Start 2PC from %s for transaction:%s with decision by %s:%s\n", getSelf().path().name(), msg.transactionId, getSender().path().name(), msg.commit);
         this.servers.forEach(i -> i.tell(new RequestMsg(msg.transactionId, msg.commit), getSelf()));
+        if (!msg.commit) {
+            // Reply immediately to Abort client decision
+            getSender().tell(new TxnResultMsg(false), getSelf());
+        }
     }
 
     private void onResponseMsg(ResponseMsg msg) {
-        // TODO: store server decisions
+        // Store Yes or No from servers
+        this.decisions.add(msg.decision);
+        if (this.decisions.size() == this.servers.size()) {
+            // Communicate Abort or Commit to servers
+            boolean decision = checkCommit();
+            System.out.printf("%s decides:%s\n", getSelf().path().name(), decision);
+            this.servers.forEach(i -> i.tell(new DecisionMsg(msg.transactionId, decision), getSender()));
+            this.transactions.get(msg.transactionId).tell(new TxnResultMsg(decision), getSender());
+            this.decisions.clear();
+            this.transactions.remove(msg.transactionId);
+        }
     }
 
     @Override

@@ -10,8 +10,8 @@ import scala.concurrent.duration.Duration;
 public final class Client extends AbstractActor {
     private static final double COMMIT_PROBABILITY = 0.8;
     private static final double WRITE_PROBABILITY = 0.5;
-    private static final int MIN_TXN_LENGTH = 20;
-    private static final int MAX_TXN_LENGTH = 40;
+    private static final int MIN_TXN_LENGTH = 2;
+    private static final int MAX_TXN_LENGTH = 5;
     private static final int RAND_LENGTH_RANGE = MAX_TXN_LENGTH - MIN_TXN_LENGTH + 1;
 
     private final int clientId;
@@ -186,7 +186,9 @@ public final class Client extends AbstractActor {
             System.out.printf("%s COMMIT FAIL (%d/%d)%n", getSelf().path().name(), numAttemptedTxn - numCommittedTxn, numAttemptedTxn);
         }
 
-        beginTxn();
+        System.out.printf("End TXN by %s\n", getSelf().path().name());;
+
+        //beginTxn();
     }
 
     @Override
