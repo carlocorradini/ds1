@@ -1,7 +1,7 @@
-# ignore useless files and folders
-.gradle
-gradle
-build
-.idea
+# Ignore useless files and folders
+.gradle/
+gradle/
+build/
+.idea/
 gradlew
 gradlew.bat
