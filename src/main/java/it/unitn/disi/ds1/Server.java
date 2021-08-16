@@ -17,7 +17,7 @@ public final class Server extends AbstractActor {
         this.dataStore = new HashMap<>();
         this.workspace = new ArrayList<>();
 
-        // Initialize server data
+        // Initialize data items
         IntStream.range(serverId * 10, (serverId * 10) + 10).forEach(i -> dataStore.put(i, new Item()));
     }
 
