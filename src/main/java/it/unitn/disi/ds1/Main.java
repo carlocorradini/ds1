@@ -13,7 +13,7 @@ public final class Main {
     private final static int N_COORDINATORS = 2;
     private final static int N_SERVERS = 3;
     private final static int N_CLIENTS = 1;
-    private final static int MAX_ITEM = 29;
+    private final static int MAX_ITEM_KEY = 29;
 
     public static void main(String[] args) {
         final ActorSystem system;
@@ -34,7 +34,7 @@ public final class Main {
         IntStream.range(0, N_CLIENTS).forEach(i -> clients.add(system.actorOf(Client.props(i), String.format("Client-%d", i))));
 
         // Send welcome message to clients from coordinators
-        WelcomeMsg welcome = new WelcomeMsg(MAX_ITEM, coords);
+        WelcomeMsg welcome = new WelcomeMsg(coords, MAX_ITEM_KEY);
         clients.forEach(peer -> peer.tell(welcome, ActorRef.noSender()));
 
         // Wait until `ENTER` key

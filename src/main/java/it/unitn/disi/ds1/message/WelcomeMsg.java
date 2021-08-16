@@ -6,16 +6,31 @@ import java.io.Serializable;
 import java.util.*;
 
 /**
- * Message to the client at startup to inform it about the coordinators and the keys.
+ * Welcome message to {@link it.unitn.disi.ds1.Client Client(s)} at startup to inform
+ * about the available {@link it.unitn.disi.ds1.Coordinator Coordinator(s)} and maximum key.
  */
 public final class WelcomeMsg implements Serializable {
     private static final long serialVersionUID = 6825038584377226538L;
 
-    public final Integer maxKey;
+    /**
+     * Available {@link it.unitn.disi.ds1.Coordinator Coordinator(s)} in the actor system.
+     */
     public final List<ActorRef> coordinators;
 
-    public WelcomeMsg(int maxKey, List<ActorRef> coordinators) {
-        this.maxKey = maxKey;
-        this.coordinators = Collections.unmodifiableList(new ArrayList<>(coordinators));
+    /**
+     * Maximum {@link it.unitn.disi.ds1.Item Item} key.
+     */
+    public final int maxItemKey;
+
+    /**
+     * Construct a welcome message with the available {@link it.unitn.disi.ds1.Coordinator Coordinator(s)}
+     * and maximum {@link it.unitn.disi.ds1.Item Item} key.
+     *
+     * @param coordinators Available {@link it.unitn.disi.ds1.Coordinator Coordinator(s)} in the actor system
+     * @param maxItemKey   Maximum {@link it.unitn.disi.ds1.Item Item} key
+     */
+    public WelcomeMsg(List<ActorRef> coordinators, int maxItemKey) {
+        this.coordinators = List.copyOf(coordinators);
+        this.maxItemKey = maxItemKey;
     }
 }

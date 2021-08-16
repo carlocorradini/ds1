@@ -38,7 +38,7 @@ public final class Server extends AbstractActor {
     private void applyChanges(UUID transactionId) {
         for (WriteRequest i : this.workspace) {
             if (i.transactionId.equals(transactionId)) {
-                this.dataStore.put(i.key, new Item(this.dataStore.get(i.key).version + 1, i.newValue));
+                this.dataStore.put(i.key, new Item(i.newValue, this.dataStore.get(i.key).version + 1));
             }
         }
     }
@@ -46,7 +46,7 @@ public final class Server extends AbstractActor {
     /*-- Message handlers ----------------------------------------------------- */
 
     private void onReadCoordMsg(ReadCoordMsg msg) {
-        getSender().tell(new ReadResultCoordMsg(msg.transactionId, msg.key, this.dataStore.get(msg.key).data), getSelf());
+        getSender().tell(new ReadResultCoordMsg(msg.transactionId, msg.key, this.dataStore.get(msg.key).value), getSelf());
     }
 
     private void onWriteCoordMsg(WriteCoordMsg msg) {
