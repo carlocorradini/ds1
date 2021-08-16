@@ -7,12 +7,12 @@ import it.unitn.disi.ds1.message.*;
 import java.util.*;
 import java.util.stream.IntStream;
 
-public final class Server extends AbstractActor {
+public final class DataStore extends AbstractActor {
     private final int serverId;
     private final HashMap<Integer, Item> dataStore;
     private final List<WriteRequest> workspace; //Better data structure Hashmap<UUID, ArrayList<WriteRequest>>?
 
-    public Server(int serverId) {
+    public DataStore(int serverId) {
         this.serverId = serverId;
         this.dataStore = new HashMap<>();
         this.workspace = new ArrayList<>();
@@ -22,7 +22,7 @@ public final class Server extends AbstractActor {
     }
 
     public static Props props(int serverId) {
-        return Props.create(Server.class, () -> new Server(serverId));
+        return Props.create(DataStore.class, () -> new DataStore(serverId));
     }
 
     /*-- Actor methods -------------------------------------------------------- */

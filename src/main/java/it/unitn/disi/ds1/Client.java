@@ -132,7 +132,7 @@ public final class Client extends AbstractActor {
     private void onWelcomeMsg(WelcomeMsg msg) {
         this.coordinators = msg.coordinators;
         System.out.println(coordinators);
-        this.maxKey = msg.maxKey;
+        this.maxKey = msg.maxItemKey;
         beginTxn();
     }
 

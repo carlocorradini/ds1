@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.annotations.Expose;
 
 /**
- * Simple item stored in a {@link Server}.
+ * Simple item stored in a {@link DataStore}.
  */
 public final class Item {
     /**
