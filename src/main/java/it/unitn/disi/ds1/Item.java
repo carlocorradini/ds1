@@ -2,6 +2,7 @@ package it.unitn.disi.ds1;
 
 import com.google.gson.Gson;
 import com.google.gson.annotations.Expose;
+import it.unitn.disi.ds1.actor.DataStore;
 
 /**
  * Simple item stored in a {@link DataStore}.

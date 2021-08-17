@@ -1,28 +1,28 @@
-package it.unitn.disi.ds1;
+package it.unitn.disi.ds1.actor;
 
-import akka.actor.AbstractActor;
 import akka.actor.Props;
+import it.unitn.disi.ds1.Item;
+import it.unitn.disi.ds1.WriteRequest;
 import it.unitn.disi.ds1.message.*;
 
 import java.util.*;
 import java.util.stream.IntStream;
 
-public final class DataStore extends AbstractActor {
-    private final int serverId;
+public final class DataStore extends Actor {
     private final HashMap<Integer, Item> dataStore;
     private final List<WriteRequest> workspace; //Better data structure Hashmap<UUID, ArrayList<WriteRequest>>?
 
-    public DataStore(int serverId) {
-        this.serverId = serverId;
+    public DataStore(int id) {
+        super(id);
         this.dataStore = new HashMap<>();
         this.workspace = new ArrayList<>();
 
-        // Initialize data items
-        IntStream.range(serverId * 10, (serverId * 10) + 10).forEach(i -> dataStore.put(i, new Item()));
+        // Initialize items
+        IntStream.range(id * 10, (id * 10) + 10).forEach(i -> dataStore.put(i, new Item()));
     }
 
-    public static Props props(int serverId) {
-        return Props.create(DataStore.class, () -> new DataStore(serverId));
+    public static Props props(int id) {
+        return Props.create(DataStore.class, () -> new DataStore(id));
     }
 
     /*-- Actor methods -------------------------------------------------------- */

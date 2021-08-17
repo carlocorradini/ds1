@@ -2,6 +2,9 @@ package it.unitn.disi.ds1;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
+import it.unitn.disi.ds1.actor.Client;
+import it.unitn.disi.ds1.actor.Coordinator;
+import it.unitn.disi.ds1.actor.DataStore;
 import it.unitn.disi.ds1.message.WelcomeMsg;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -34,7 +37,7 @@ public final class Main {
 
         // Initialize coordinators
         LOGGER.info("Initializing {} coordinators", N_COORDINATORS);
-        IntStream.range(0, N_COORDINATORS).forEach(i -> coords.add(system.actorOf(Coordinator.props(servers), String.format("Coordinator-%d", i))));
+        IntStream.range(0, N_COORDINATORS).forEach(i -> coords.add(system.actorOf(Coordinator.props(i, servers), String.format("Coordinator-%d", i))));
 
         // Initialize clients
         LOGGER.info("Initializing {} clients", N_CLIENTS);

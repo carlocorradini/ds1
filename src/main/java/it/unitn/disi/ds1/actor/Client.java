@@ -1,4 +1,4 @@
-package it.unitn.disi.ds1;
+package it.unitn.disi.ds1.actor;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -7,14 +7,13 @@ import akka.actor.*;
 import it.unitn.disi.ds1.message.*;
 import scala.concurrent.duration.Duration;
 
-public final class Client extends AbstractActor {
+public final class Client extends Actor {
     private static final double COMMIT_PROBABILITY = 0.8;
     private static final double WRITE_PROBABILITY = 0.5;
     private static final int MIN_TXN_LENGTH = 2;
     private static final int MAX_TXN_LENGTH = 5;
     private static final int RAND_LENGTH_RANGE = MAX_TXN_LENGTH - MIN_TXN_LENGTH + 1;
 
-    private final int clientId;
     private List<ActorRef> coordinators;
 
     // Maximum key associated to items of the store
@@ -36,16 +35,16 @@ public final class Client extends AbstractActor {
 
     private final Random random;
 
-    public Client(int clientId) {
-        this.clientId = clientId;
+    public Client(int id) {
+        super(id);
         this.numAttemptedTxn = 0;
         this.numCommittedTxn = 0;
         this.txnId = Optional.empty();
         this.random = new Random();
     }
 
-    static public Props props(int clientId) {
-        return Props.create(Client.class, () -> new Client(clientId));
+    static public Props props(int id) {
+        return Props.create(Client.class, () -> new Client(id));
     }
 
     /*-- Actor methods -------------------------------------------------------- */
@@ -64,7 +63,7 @@ public final class Client extends AbstractActor {
 
         // Contact a random coordinator and begin TXN
         txnCoordinator = coordinators.get(random.nextInt(coordinators.size()));
-        txnCoordinator.tell(new TxnBeginMsg(clientId), getSelf());
+        txnCoordinator.tell(new TxnBeginMsg(id), getSelf());
 
         // how many operations (taking some amount and adding it somewhere else)?
         int numExtraOp = RAND_LENGTH_RANGE > 0 ? random.nextInt(RAND_LENGTH_RANGE) : 0;
@@ -86,7 +85,7 @@ public final class Client extends AbstractActor {
     // end the current TXN sending TxnEndMsg to the coordinator
     void endTxn() {
         boolean doCommit = random.nextDouble() < COMMIT_PROBABILITY;
-        txnCoordinator.tell(new TxnEndMsg(txnId.orElseThrow(NullPointerException::new), clientId, doCommit), getSelf());
+        txnCoordinator.tell(new TxnEndMsg(txnId.orElseThrow(NullPointerException::new), id, doCommit), getSelf());
 
         System.out.printf("%s END transaction %s%n", getSelf().path().name(), txnId.orElseThrow(NullPointerException::new));
 
@@ -103,8 +102,8 @@ public final class Client extends AbstractActor {
         secondKey = (firstKey + randKeyOffset) % (maxKey + 1);
 
         // READ requests
-        txnCoordinator.tell(new ReadMsg(txnId.orElseThrow(NullPointerException::new), clientId, firstKey), getSelf());
-        txnCoordinator.tell(new ReadMsg(txnId.orElseThrow(NullPointerException::new), clientId, secondKey), getSelf());
+        txnCoordinator.tell(new ReadMsg(txnId.orElseThrow(NullPointerException::new), id, firstKey), getSelf());
+        txnCoordinator.tell(new ReadMsg(txnId.orElseThrow(NullPointerException::new), id, secondKey), getSelf());
 
         // delete the current read values
         firstValue = null;
@@ -120,8 +119,8 @@ public final class Client extends AbstractActor {
         // take some amount from one value and pass it to the other, then request writes
         Integer amountTaken = 0;
         if (firstValue >= 1) amountTaken = 1 + random.nextInt(firstValue);
-        txnCoordinator.tell(new WriteMsg(txnId.orElseThrow(NullPointerException::new), clientId, firstKey, firstValue - amountTaken), getSelf());
-        txnCoordinator.tell(new WriteMsg(txnId.orElseThrow(NullPointerException::new), clientId, secondKey, secondValue + amountTaken), getSelf());
+        txnCoordinator.tell(new WriteMsg(txnId.orElseThrow(NullPointerException::new), id, firstKey, firstValue - amountTaken), getSelf());
+        txnCoordinator.tell(new WriteMsg(txnId.orElseThrow(NullPointerException::new), id, secondKey, secondValue + amountTaken), getSelf());
 
         System.out.printf("%s WRITE #%d taken %d (%d, %d), (%d, %d)%n",
                 getSelf().path().name(), numOpDone, amountTaken, firstKey, (firstValue - amountTaken), secondKey, (secondValue + amountTaken));
@@ -186,7 +185,8 @@ public final class Client extends AbstractActor {
             System.out.printf("%s COMMIT FAIL (%d/%d)%n", getSelf().path().name(), numAttemptedTxn - numCommittedTxn, numAttemptedTxn);
         }
 
-        System.out.printf("End TXN by %s\n", getSelf().path().name());;
+        System.out.printf("End TXN by %s\n", getSelf().path().name());
+        ;
 
         //beginTxn();
     }

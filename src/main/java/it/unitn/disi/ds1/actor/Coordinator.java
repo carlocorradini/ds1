@@ -1,6 +1,5 @@
-package it.unitn.disi.ds1;
+package it.unitn.disi.ds1.actor;
 
-import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import it.unitn.disi.ds1.message.*;
@@ -10,19 +9,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
-public final class Coordinator extends AbstractActor {
+public final class Coordinator extends Actor {
     private final List<ActorRef> servers;
     private final HashMap<UUID, ActorRef> transactions;
     private final List<Boolean> decisions;
 
-    public Coordinator(List<ActorRef> servers) {
+    public Coordinator(int id, List<ActorRef> servers) {
+        super(id);
         this.servers = new ArrayList<>(servers);
         this.transactions = new HashMap<>();
         this.decisions = new ArrayList<>();
     }
 
-    static public Props props(List<ActorRef> servers) {
-        return Props.create(Coordinator.class, () -> new Coordinator(servers));
+    public static Props props(int id, List<ActorRef> servers) {
+        return Props.create(Coordinator.class, () -> new Coordinator(id, servers));
     }
 
     /*-- Actor methods -------------------------------------------------------- */
