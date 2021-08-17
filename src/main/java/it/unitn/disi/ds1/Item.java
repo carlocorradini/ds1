@@ -1,6 +1,7 @@
 package it.unitn.disi.ds1;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
 import it.unitn.disi.ds1.actor.DataStore;
 
@@ -21,7 +22,9 @@ public final class Item {
     /**
      * Gson instance.
      */
-    private static final Gson gson = new Gson();
+    private static final Gson GSON = new GsonBuilder()
+            .excludeFieldsWithoutExposeAnnotation()
+            .create();
 
     /**
      * Value of the item.
@@ -67,6 +70,6 @@ public final class Item {
 
     @Override
     public String toString() {
-        return gson.toJson(this);
+        return GSON.toJson(this);
     }
 }

@@ -4,16 +4,26 @@ import akka.actor.Props;
 import it.unitn.disi.ds1.Item;
 import it.unitn.disi.ds1.WriteRequest;
 import it.unitn.disi.ds1.message.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 import java.util.stream.IntStream;
 
 public final class DataStore extends Actor {
+    /**
+     * Logger.
+     */
+    private static final Logger LOGGER = LogManager.getLogger(DataStore.class);
+
     private final HashMap<Integer, Item> dataStore;
     private final List<WriteRequest> workspace; //Better data structure Hashmap<UUID, ArrayList<WriteRequest>>?
 
     public DataStore(int id) {
         super(id);
+        LOGGER.debug("DataStore {} initialized", id);
+
+
         this.dataStore = new HashMap<>();
         this.workspace = new ArrayList<>();
 

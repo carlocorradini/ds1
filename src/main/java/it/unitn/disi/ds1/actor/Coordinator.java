@@ -3,31 +3,41 @@ package it.unitn.disi.ds1.actor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import it.unitn.disi.ds1.message.*;
+import it.unitn.disi.ds1.message.welcome.CoordinatorWelcomeMessage;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public final class Coordinator extends Actor {
-    private final List<ActorRef> servers;
+    /**
+     * Logger.
+     */
+    private static final Logger LOGGER = LogManager.getLogger(Coordinator.class);
+
+    /**
+     * List of available {@link DataStore DataStore(s)}.
+     */
+    private final List<ActorRef> dataStores;
     private final HashMap<UUID, ActorRef> transactions;
     private final List<Boolean> decisions;
 
-    public Coordinator(int id, List<ActorRef> servers) {
+    public Coordinator(int id) {
         super(id);
-        this.servers = new ArrayList<>(servers);
+        this.dataStores = new ArrayList<>();
         this.transactions = new HashMap<>();
         this.decisions = new ArrayList<>();
+
+        LOGGER.debug("Coordinator {} initialized", id);
     }
 
-    public static Props props(int id, List<ActorRef> servers) {
-        return Props.create(Coordinator.class, () -> new Coordinator(id, servers));
+    public static Props props(int id) {
+        return Props.create(Coordinator.class, () -> new Coordinator(id));
     }
 
     /*-- Actor methods -------------------------------------------------------- */
     private ActorRef serverByKey(int key) {
-        return servers.get(key / 10);
+        return dataStores.get(key / 10);
     }
 
     private boolean checkCommit() {
@@ -40,6 +50,14 @@ public final class Coordinator extends Actor {
     }
 
     /*-- Message handlers ----------------------------------------------------- */
+    private void onCoordinatorWelcomeMessage(CoordinatorWelcomeMessage message) {
+        LOGGER.debug("Coordinators {} received welcome message: {}", id, message);
+
+        // Data Stores
+        dataStores.clear();
+        dataStores.addAll(message.dataStores);
+    }
+
 
     private void onTxnBeginMsg(TxnBeginMsg msg) {
         final UUID transactionId = UUID.randomUUID();
@@ -61,7 +79,7 @@ public final class Coordinator extends Actor {
 
     private void onTxnEndMsg(TxnEndMsg msg) {
         System.out.printf("Start 2PC from %s for transaction:%s with decision by %s:%s\n", getSelf().path().name(), msg.transactionId, getSender().path().name(), msg.commit);
-        this.servers.forEach(i -> i.tell(new RequestMsg(msg.transactionId, msg.commit), getSelf()));
+        this.dataStores.forEach(i -> i.tell(new RequestMsg(msg.transactionId, msg.commit), getSelf()));
         if (!msg.commit) {
             // Reply immediately to Abort client decision
             getSender().tell(new TxnResultMsg(false), getSelf());
@@ -71,11 +89,11 @@ public final class Coordinator extends Actor {
     private void onResponseMsg(ResponseMsg msg) {
         // Store Yes or No from servers
         this.decisions.add(msg.decision);
-        if (this.decisions.size() == this.servers.size()) {
+        if (this.decisions.size() == this.dataStores.size()) {
             // Communicate Abort or Commit to servers
             boolean decision = checkCommit();
             System.out.printf("%s decides:%s\n", getSelf().path().name(), decision);
-            this.servers.forEach(i -> i.tell(new DecisionMsg(msg.transactionId, decision), getSender()));
+            this.dataStores.forEach(i -> i.tell(new DecisionMsg(msg.transactionId, decision), getSender()));
             this.transactions.get(msg.transactionId).tell(new TxnResultMsg(decision), getSender());
             this.decisions.clear();
             this.transactions.remove(msg.transactionId);
@@ -85,12 +103,16 @@ public final class Coordinator extends Actor {
     @Override
     public Receive createReceive() {
         return receiveBuilder()
+                .match(CoordinatorWelcomeMessage.class, this::onCoordinatorWelcomeMessage)
+                .build();
+
+        /*return receiveBuilder()
                 .match(TxnBeginMsg.class, this::onTxnBeginMsg)
                 .match(ReadMsg.class, this::onReadMsg)
                 .match(ReadResultCoordMsg.class, this::onReadResultCoordMsg)
                 .match(WriteMsg.class, this::onWriteMsg)
                 .match(TxnEndMsg.class, this::onTxnEndMsg)
                 .match(ResponseMsg.class, this::onResponseMsg)
-                .build();
+                .build();*/
     }
 }

@@ -5,6 +5,9 @@ import java.util.concurrent.TimeUnit;
 
 import akka.actor.*;
 import it.unitn.disi.ds1.message.*;
+import it.unitn.disi.ds1.message.welcome.ClientWelcomeMessage;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import scala.concurrent.duration.Duration;
 
 public final class Client extends Actor {
@@ -14,10 +17,20 @@ public final class Client extends Actor {
     private static final int MAX_TXN_LENGTH = 5;
     private static final int RAND_LENGTH_RANGE = MAX_TXN_LENGTH - MIN_TXN_LENGTH + 1;
 
-    private List<ActorRef> coordinators;
+    /**
+     * Logger.
+     */
+    private static final Logger LOGGER = LogManager.getLogger(Client.class);
 
-    // Maximum key associated to items of the store
-    private int maxKey;
+    /**
+     * List of available {@link Coordinator Coordinator(s)}.
+     */
+    private final List<ActorRef> coordinators;
+
+    /**
+     * Maximum key associated to items in {@link DataStore DataStore(s)F}.
+     */
+    private int maxItemKey;
 
     // Keep track of the number of TXNs (attempted, successfully committed)
     private int numAttemptedTxn;
@@ -37,6 +50,10 @@ public final class Client extends Actor {
 
     public Client(int id) {
         super(id);
+        this.coordinators = new ArrayList<>();
+        LOGGER.debug("Client {} initialized", id);
+
+
         this.numAttemptedTxn = 0;
         this.numCommittedTxn = 0;
         this.txnId = Optional.empty();
@@ -97,9 +114,9 @@ public final class Client extends Actor {
     // READ two items (will move some amount from the value of the first to the second)
     void readTwo() {
         // read two different keys
-        firstKey = random.nextInt(maxKey + 1);
-        int randKeyOffset = 1 + random.nextInt(maxKey - 1);
-        secondKey = (firstKey + randKeyOffset) % (maxKey + 1);
+        firstKey = random.nextInt(maxItemKey + 1);
+        int randKeyOffset = 1 + random.nextInt(maxItemKey - 1);
+        secondKey = (firstKey + randKeyOffset) % (maxItemKey + 1);
 
         // READ requests
         txnCoordinator.tell(new ReadMsg(txnId.orElseThrow(NullPointerException::new), id, firstKey), getSelf());
@@ -127,11 +144,16 @@ public final class Client extends Actor {
     }
 
     /*-- Message handlers ----------------------------------------------------- */
+    private void onClientWelcomeMessage(ClientWelcomeMessage message) {
+        LOGGER.debug("Client {} received welcome message: {}", id, message);
 
-    private void onWelcomeMsg(WelcomeMsg msg) {
-        this.coordinators = msg.coordinators;
-        System.out.println(coordinators);
-        this.maxKey = msg.maxItemKey;
+        // Coordinators
+        coordinators.clear();
+        coordinators.addAll(message.coordinators);
+        // Max item key
+        maxItemKey = message.maxItemKey;
+
+        // Begin Transaction
         beginTxn();
     }
 
@@ -194,12 +216,16 @@ public final class Client extends Actor {
     @Override
     public Receive createReceive() {
         return receiveBuilder()
+                .match(ClientWelcomeMessage.class, this::onClientWelcomeMessage)
+                .build();
+
+        /*return receiveBuilder()
                 .match(WelcomeMsg.class, this::onWelcomeMsg)
                 .match(TxnAcceptMsg.class, this::onTxnAcceptMsg)
                 .match(TxnAcceptTimeoutMsg.class, this::onTxnAcceptTimeoutMsg)
                 .match(ReadResultMsg.class, this::onReadResultMsg)
                 .match(TxnResultMsg.class, this::onTxnResultMsg)
                 .match(StopMsg.class, this::onStopMsg)
-                .build();
+                .build();*/
     }
 }
