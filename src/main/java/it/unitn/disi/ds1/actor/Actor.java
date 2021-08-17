@@ -28,7 +28,7 @@ public abstract class Actor extends AbstractActor {
     public final int id;
 
     /**
-     * Construct an abstract actor.
+     * Construct a new Actor class.
      *
      * @param id Actor identifier
      */
