@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit;
 
 import akka.actor.*;
 import it.unitn.disi.ds1.message.*;
+import it.unitn.disi.ds1.message.txn.TxnBeginMessage;
 import it.unitn.disi.ds1.message.welcome.ClientWelcomeMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -160,7 +161,10 @@ public final class Client extends Actor {
         try {
             Thread.sleep(10);
         } catch (InterruptedException e) {
+            LOGGER.error("{}", e.getMessage());
             e.printStackTrace();
+            // FIXME Try with something compatible with Akka
+            System.exit(1);
         }
 
         txnAccepted = false;
@@ -168,7 +172,7 @@ public final class Client extends Actor {
 
         // Contact a random coordinator and begin a transaction
         txnCoordinator = coordinators.get(random.nextInt(coordinators.size()));
-        txnCoordinator.tell(new TxnBeginMsg(id), getSelf());
+        txnCoordinator.tell(new TxnBeginMessage(id), getSelf());
 
         // Total number of operations
         final int txtOpExtra = RAND_LENGTH_RANGE > 0 ? random.nextInt(RAND_LENGTH_RANGE) : 0;

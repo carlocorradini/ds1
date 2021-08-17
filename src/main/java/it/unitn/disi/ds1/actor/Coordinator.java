@@ -3,6 +3,7 @@ package it.unitn.disi.ds1.actor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import it.unitn.disi.ds1.message.*;
+import it.unitn.disi.ds1.message.txn.TxnBeginMessage;
 import it.unitn.disi.ds1.message.welcome.CoordinatorWelcomeMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -91,7 +92,7 @@ public final class Coordinator extends Actor {
     }
 
     /*-- Message handlers ----------------------------------------------------- */
-    private void onTxnBeginMsg(TxnBeginMsg msg) {
+    private void onTxnBeginMsg(TxnBeginMessage msg) {
         final UUID transactionId = UUID.randomUUID();
         this.transactions.put(transactionId, getSender());
         getSender().tell(new TxnAcceptMsg(transactionId), getSelf());
