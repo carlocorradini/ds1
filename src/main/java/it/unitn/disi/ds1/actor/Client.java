@@ -46,8 +46,6 @@ public final class Client extends Actor {
     private Cancellable acceptTimeout;
     private Optional<UUID> txnId;
 
-    private final Random random;
-
     public Client(int id) {
         super(id);
         this.coordinators = new ArrayList<>();
@@ -57,7 +55,6 @@ public final class Client extends Actor {
         this.numAttemptedTxn = 0;
         this.numCommittedTxn = 0;
         this.txnId = Optional.empty();
-        this.random = new Random();
     }
 
     static public Props props(int id) {
