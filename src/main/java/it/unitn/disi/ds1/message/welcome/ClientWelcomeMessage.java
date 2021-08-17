@@ -36,7 +36,7 @@ public final class ClientWelcomeMessage implements Serializable {
     public final int maxItemKey;
 
     /**
-     * Construct a new @link ClientWelcomeMessage class.
+     * Construct a new ClientWelcomeMessage class.
      *
      * @param coordinators List of available {@link it.unitn.disi.ds1.actor.Client Client(s)}
      * @param maxItemKey   Maximum {@link it.unitn.disi.ds1.Item Item} key

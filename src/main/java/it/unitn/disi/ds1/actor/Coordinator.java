@@ -44,7 +44,13 @@ public final class Coordinator extends Actor {
 
     // --- Methods ---
 
-    // --- Message handlers ---
+    // --- Message handlers --
+
+    /**
+     * Callback for {@link CoordinatorWelcomeMessage} message.
+     *
+     * @param message Received message
+     */
     private void onCoordinatorWelcomeMessage(CoordinatorWelcomeMessage message) {
         LOGGER.debug("Coordinators {} received welcome message: {}", id, message);
 

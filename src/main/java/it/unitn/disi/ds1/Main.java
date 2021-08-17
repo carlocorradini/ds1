@@ -15,11 +15,29 @@ import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.stream.IntStream;
 
+/**
+ * Main class.
+ */
 public final class Main {
-    private final static int N_COORDINATORS = 2;
+    /**
+     * Number of {@link DataStore Data Store(s)}.
+     */
     private final static int N_DATA_STORES = 3;
+
+    /**
+     * Number of {@link Coordinator Coordinator(s)}.
+     */
+    private final static int N_COORDINATORS = 2;
+
+    /**
+     * Number of {@link Client Client(s)}.
+     */
     private final static int N_CLIENTS = 1;
-    private final static int MAX_ITEM_KEY = 29;
+
+    /**
+     * Maximum item key index value.
+     */
+    private final static int MAX_ITEM_KEY = (N_DATA_STORES * 10) - 1;
 
     /**
      * Logger.

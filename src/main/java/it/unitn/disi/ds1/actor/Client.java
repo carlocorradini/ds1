@@ -74,6 +74,12 @@ public final class Client extends Actor {
     // --- Methods ---
 
     // --- Message handlers ---
+
+    /**
+     * Callback for {@link ClientWelcomeMessage} message.
+     *
+     * @param message Received message
+     */
     private void onClientWelcomeMessage(ClientWelcomeMessage message) {
         LOGGER.debug("Client {} received welcome message: {}", id, message);
 
