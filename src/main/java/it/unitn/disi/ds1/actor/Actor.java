@@ -47,6 +47,7 @@ public abstract class Actor extends AbstractActor {
                 secureRandom = SecureRandom.getInstanceStrong();
             } catch (NoSuchAlgorithmException ignored) {
                 LOGGER.error("Secure Random Number Generator (RNG) not found: {}", e.getMessage());
+                // FIXME Try with something compatible with Akka
                 System.exit(1);
             }
         }
