@@ -9,6 +9,9 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 
+/**
+ * Coordinator {@link Actor actor} class.
+ */
 public final class Coordinator extends Actor {
     /**
      * Logger.
@@ -19,9 +22,17 @@ public final class Coordinator extends Actor {
      * List of available {@link DataStore DataStore(s)}.
      */
     private final List<ActorRef> dataStores;
+
     private final HashMap<UUID, ActorRef> transactions;
     private final List<Boolean> decisions;
 
+    // --- Constructors ---
+
+    /**
+     * Construct a new Coordinator class.
+     *
+     * @param id Coordinator id
+     */
     public Coordinator(int id) {
         super(id);
         this.dataStores = new ArrayList<>();
@@ -31,6 +42,12 @@ public final class Coordinator extends Actor {
         LOGGER.debug("Coordinator {} initialized", id);
     }
 
+    /**
+     * Return Coordinator {@link Props}
+     *
+     * @param id Coordinator id
+     * @return Coordinator {@link Props}
+     */
     public static Props props(int id) {
         return Props.create(Coordinator.class, () -> new Coordinator(id));
     }

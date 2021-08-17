@@ -10,6 +10,9 @@ import org.apache.logging.log4j.Logger;
 import java.util.*;
 import java.util.stream.IntStream;
 
+/**
+ * Data Store {@link Actor actor} class.
+ */
 public final class DataStore extends Actor {
     /**
      * Logger.
@@ -19,6 +22,13 @@ public final class DataStore extends Actor {
     private final HashMap<Integer, Item> dataStore;
     private final List<WriteRequest> workspace; //Better data structure Hashmap<UUID, ArrayList<WriteRequest>>?
 
+    // --- Constructors ---
+
+    /**
+     * Construct a new Data Store class.
+     *
+     * @param id Data Store id
+     */
     public DataStore(int id) {
         super(id);
         LOGGER.debug("DataStore {} initialized", id);
@@ -31,6 +41,12 @@ public final class DataStore extends Actor {
         IntStream.range(id * 10, (id * 10) + 10).forEach(i -> dataStore.put(i, new Item()));
     }
 
+    /**
+     * Return Data Store {@link Props}.
+     *
+     * @param id Data Store id
+     * @return Data Store {@link Props}
+     */
     public static Props props(int id) {
         return Props.create(DataStore.class, () -> new DataStore(id));
     }
