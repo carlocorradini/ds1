@@ -64,6 +64,29 @@ public final class Client extends Actor {
         return Props.create(Client.class, () -> new Client(id));
     }
 
+    @Override
+    public Receive createReceive() {
+        return receiveBuilder()
+                .match(ClientWelcomeMessage.class, this::onClientWelcomeMessage)
+                .build();
+    }
+
+    // --- Methods ---
+
+    // --- Message handlers ---
+    private void onClientWelcomeMessage(ClientWelcomeMessage message) {
+        LOGGER.debug("Client {} received welcome message: {}", id, message);
+
+        // Coordinators
+        coordinators.clear();
+        coordinators.addAll(message.coordinators);
+        // Max item key
+        maxItemKey = message.maxItemKey;
+
+        // Begin Transaction
+        beginTxn();
+    }
+
     /*-- Actor methods -------------------------------------------------------- */
 
     // start a new TXN: choose a random coordinator, send TxnBeginMsg and set timeout
@@ -144,19 +167,6 @@ public final class Client extends Actor {
     }
 
     /*-- Message handlers ----------------------------------------------------- */
-    private void onClientWelcomeMessage(ClientWelcomeMessage message) {
-        LOGGER.debug("Client {} received welcome message: {}", id, message);
-
-        // Coordinators
-        coordinators.clear();
-        coordinators.addAll(message.coordinators);
-        // Max item key
-        maxItemKey = message.maxItemKey;
-
-        // Begin Transaction
-        beginTxn();
-    }
-
     private void onStopMsg(StopMsg msg) {
         getContext().stop(getSelf());
     }
@@ -211,21 +221,5 @@ public final class Client extends Actor {
         ;
 
         //beginTxn();
-    }
-
-    @Override
-    public Receive createReceive() {
-        return receiveBuilder()
-                .match(ClientWelcomeMessage.class, this::onClientWelcomeMessage)
-                .build();
-
-        /*return receiveBuilder()
-                .match(WelcomeMsg.class, this::onWelcomeMsg)
-                .match(TxnAcceptMsg.class, this::onTxnAcceptMsg)
-                .match(TxnAcceptTimeoutMsg.class, this::onTxnAcceptTimeoutMsg)
-                .match(ReadResultMsg.class, this::onReadResultMsg)
-                .match(TxnResultMsg.class, this::onTxnResultMsg)
-                .match(StopMsg.class, this::onStopMsg)
-                .build();*/
     }
 }

@@ -35,6 +35,20 @@ public final class DataStore extends Actor {
         return Props.create(DataStore.class, () -> new DataStore(id));
     }
 
+    @Override
+    public Receive createReceive() {
+        return receiveBuilder()
+                .match(ReadCoordMsg.class, this::onReadCoordMsg)
+                .match(WriteCoordMsg.class, this::onWriteCoordMsg)
+                .match(RequestMsg.class, this::onRequestMsg)
+                .match(DecisionMsg.class, this::onDecisionMsg)
+                .build();
+    }
+
+    // --- Methods ---
+
+    // --- Message handlers ---
+
     /*-- Actor methods -------------------------------------------------------- */
     private boolean checkVersion(UUID transactionId) {
         for (WriteRequest i : this.workspace) {
@@ -85,15 +99,5 @@ public final class DataStore extends Actor {
         }
         // Discard changes if Abort or Clear workspace
         this.workspace.removeIf(i -> i.transactionId.equals(msg.transactionId));
-    }
-
-    @Override
-    public Receive createReceive() {
-        return receiveBuilder()
-                .match(ReadCoordMsg.class, this::onReadCoordMsg)
-                .match(WriteCoordMsg.class, this::onWriteCoordMsg)
-                .match(RequestMsg.class, this::onRequestMsg)
-                .match(DecisionMsg.class, this::onDecisionMsg)
-                .build();
     }
 }

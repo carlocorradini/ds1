@@ -35,6 +35,24 @@ public final class Coordinator extends Actor {
         return Props.create(Coordinator.class, () -> new Coordinator(id));
     }
 
+    @Override
+    public Receive createReceive() {
+        return receiveBuilder()
+                .match(CoordinatorWelcomeMessage.class, this::onCoordinatorWelcomeMessage)
+                .build();
+    }
+
+    // --- Methods ---
+
+    // --- Message handlers ---
+    private void onCoordinatorWelcomeMessage(CoordinatorWelcomeMessage message) {
+        LOGGER.debug("Coordinators {} received welcome message: {}", id, message);
+
+        // Data Stores
+        dataStores.clear();
+        dataStores.addAll(message.dataStores);
+    }
+
     /*-- Actor methods -------------------------------------------------------- */
     private ActorRef serverByKey(int key) {
         return dataStores.get(key / 10);
@@ -50,15 +68,6 @@ public final class Coordinator extends Actor {
     }
 
     /*-- Message handlers ----------------------------------------------------- */
-    private void onCoordinatorWelcomeMessage(CoordinatorWelcomeMessage message) {
-        LOGGER.debug("Coordinators {} received welcome message: {}", id, message);
-
-        // Data Stores
-        dataStores.clear();
-        dataStores.addAll(message.dataStores);
-    }
-
-
     private void onTxnBeginMsg(TxnBeginMsg msg) {
         final UUID transactionId = UUID.randomUUID();
         this.transactions.put(transactionId, getSender());
@@ -98,21 +107,5 @@ public final class Coordinator extends Actor {
             this.decisions.clear();
             this.transactions.remove(msg.transactionId);
         }
-    }
-
-    @Override
-    public Receive createReceive() {
-        return receiveBuilder()
-                .match(CoordinatorWelcomeMessage.class, this::onCoordinatorWelcomeMessage)
-                .build();
-
-        /*return receiveBuilder()
-                .match(TxnBeginMsg.class, this::onTxnBeginMsg)
-                .match(ReadMsg.class, this::onReadMsg)
-                .match(ReadResultCoordMsg.class, this::onReadResultCoordMsg)
-                .match(WriteMsg.class, this::onWriteMsg)
-                .match(TxnEndMsg.class, this::onTxnEndMsg)
-                .match(ResponseMsg.class, this::onResponseMsg)
-                .build();*/
     }
 }
