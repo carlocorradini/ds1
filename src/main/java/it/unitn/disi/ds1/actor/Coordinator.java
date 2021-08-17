@@ -70,7 +70,7 @@ public final class Coordinator extends Actor {
      * @param message Received message
      */
     private void onCoordinatorWelcomeMessage(CoordinatorWelcomeMessage message) {
-        LOGGER.debug("Coordinators {} received welcome message: {}", id, message);
+        LOGGER.debug("Coordinator {} received welcome message: {}", id, message);
 
         // Data Stores
         dataStores.clear();
