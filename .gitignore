@@ -1,7 +1,10 @@
-# Ignore useless files and folders
+# Folders
 .gradle/
 gradle/
 build/
 .idea/
+
+# Files
 gradlew
 gradlew.bat
+*.log

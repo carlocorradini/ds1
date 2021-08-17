@@ -37,7 +37,7 @@ public final class Main {
         IntStream.range(0, N_COORDINATORS).forEach(i -> coords.add(system.actorOf(Coordinator.props(servers), String.format("Coordinator-%d", i))));
 
         // Initialize clients
-        LOGGER.info("Initializing {} client", N_CLIENTS);
+        LOGGER.info("Initializing {} clients", N_CLIENTS);
         IntStream.range(0, N_CLIENTS).forEach(i -> clients.add(system.actorOf(Client.props(i), String.format("Client-%d", i))));
 
         // Send welcome message to clients from coordinators
