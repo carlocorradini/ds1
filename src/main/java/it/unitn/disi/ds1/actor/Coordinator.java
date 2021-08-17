@@ -57,6 +57,7 @@ public final class Coordinator extends Actor {
     public Receive createReceive() {
         return receiveBuilder()
                 .match(CoordinatorWelcomeMessage.class, this::onCoordinatorWelcomeMessage)
+                .match(TxnBeginMessage.class, this::onTxnBeginMessage)
                 .build();
     }
 
@@ -77,6 +78,21 @@ public final class Coordinator extends Actor {
         dataStores.addAll(message.dataStores);
     }
 
+    /**
+     * Callback for {@link TxnBeginMessage} message.
+     *
+     * @param message Received message
+     */
+    private void onTxnBeginMessage(TxnBeginMessage message) {
+        LOGGER.debug("Coordinator {} received txn begin message: {}", id, message);
+
+        final UUID transactionId = UUID.randomUUID();
+        this.transactions.put(transactionId, getSender());
+        getSender().tell(new TxnAcceptMsg(transactionId), getSelf());
+
+        LOGGER.info("Coordinator {} txnId {} for client {}", id, transactionId, message.clientId);
+    }
+
     /*-- Actor methods -------------------------------------------------------- */
     private ActorRef serverByKey(int key) {
         return dataStores.get(key / 10);
@@ -92,12 +108,6 @@ public final class Coordinator extends Actor {
     }
 
     /*-- Message handlers ----------------------------------------------------- */
-    private void onTxnBeginMsg(TxnBeginMessage msg) {
-        final UUID transactionId = UUID.randomUUID();
-        this.transactions.put(transactionId, getSender());
-        getSender().tell(new TxnAcceptMsg(transactionId), getSelf());
-    }
-
     private void onReadMsg(ReadMsg msg) {
         serverByKey(msg.key).tell(new ReadCoordMsg(msg.transactionId, msg.key), getSelf());
     }
