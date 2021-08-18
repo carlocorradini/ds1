@@ -33,7 +33,6 @@ public final class DataStore extends Actor {
         super(id);
         LOGGER.debug("DataStore {} initialized", id);
 
-
         this.dataStore = new HashMap<>();
         this.workspace = new ArrayList<>();
 
