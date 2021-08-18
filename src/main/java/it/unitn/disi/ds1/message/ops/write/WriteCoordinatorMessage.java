@@ -1,4 +1,4 @@
-package it.unitn.disi.ds1.message.ops.read;
+package it.unitn.disi.ds1.message.ops.write;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -10,11 +10,11 @@ import java.util.UUID;
 import java.io.Serializable;
 
 /**
- * Read request message
+ * Write request message
  * from {@link it.unitn.disi.ds1.actor.Coordinator} to {@link it.unitn.disi.ds1.actor.DataStore}.
  */
-public final class ReadCoordinatorMessage extends TxnMsg implements Serializable {
-    private static final long serialVersionUID = 4166460770428474735L;
+public final class WriteCoordinatorMessage extends TxnMsg implements Serializable {
+    private static final long serialVersionUID = -4823398098700891377L;
 
     /**
      * Gson instance.
@@ -24,20 +24,28 @@ public final class ReadCoordinatorMessage extends TxnMsg implements Serializable
             .create();
 
     /**
-     * {@link it.unitn.disi.ds1.Item} key to read.
+     * {@link it.unitn.disi.ds1.Item} key to write.
      */
     @Expose
     public final int key;
 
     /**
-     * Construct a new ReadCoordinatorMessage class.
+     * New {@link it.unitn.disi.ds1.Item} value to write.
+     */
+    @Expose
+    public final int value;
+
+    /**
+     * Construct a new WriteCoordinatorMessage class.
      *
      * @param transactionId Transaction id
-     * @param key           Item key to read
+     * @param key           Item key to write
+     * @param value         Item new value to write
      */
-    public ReadCoordinatorMessage(UUID transactionId, int key) {
+    public WriteCoordinatorMessage(UUID transactionId, int key, int value) {
         super(transactionId);
         this.key = key;
+        this.value = value;
     }
 
     @Override

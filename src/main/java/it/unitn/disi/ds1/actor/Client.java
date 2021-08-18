@@ -7,6 +7,7 @@ import akka.actor.*;
 import it.unitn.disi.ds1.message.*;
 import it.unitn.disi.ds1.message.ops.read.ReadMessage;
 import it.unitn.disi.ds1.message.ops.read.ReadResultMessage;
+import it.unitn.disi.ds1.message.ops.write.WriteMessage;
 import it.unitn.disi.ds1.message.txn.TxnAcceptMessage;
 import it.unitn.disi.ds1.message.txn.TxnAcceptTimeoutMessage;
 import it.unitn.disi.ds1.message.txn.TxnBeginMessage;
@@ -229,6 +230,7 @@ public final class Client extends Actor {
         final ReadMessage outFirstMessage = new ReadMessage(txnId.orElseThrow(NullPointerException::new), id, txnFirstKey);
         txnCoordinator.tell(outFirstMessage, getSelf());
         LOGGER.debug("Client {} send ReadMessage: {}", id, outFirstMessage);
+
         // Read request 2
         final ReadMessage outSecondMessage = new ReadMessage(txnId.orElseThrow(NullPointerException::new), id, txnSecondKey);
         txnCoordinator.tell(outSecondMessage, getSelf());
@@ -253,11 +255,12 @@ public final class Client extends Actor {
         final int newSecondValue = txnSecondValue + amount;
 
         // Write request 1
-        final WriteMsg outFirstMessage = new WriteMsg(txnId.orElseThrow(NullPointerException::new), id, txnFirstKey, newFirstValue);
+        final WriteMessage outFirstMessage = new WriteMessage(txnId.orElseThrow(NullPointerException::new), id, txnFirstKey, newFirstValue);
         txnCoordinator.tell(outFirstMessage, getSelf());
         LOGGER.debug("Client {} send WriteMessage: {}", id, outFirstMessage);
+
         // Write request 2
-        final WriteMsg outSecondMessage = new WriteMsg(txnId.orElseThrow(NullPointerException::new), id, txnSecondKey, newSecondValue);
+        final WriteMessage outSecondMessage = new WriteMessage(txnId.orElseThrow(NullPointerException::new), id, txnSecondKey, newSecondValue);
         txnCoordinator.tell(outSecondMessage, getSelf());
         LOGGER.debug("Client {} send WriteMessage: {}", id, outSecondMessage);
 

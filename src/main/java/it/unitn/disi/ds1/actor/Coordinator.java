@@ -6,6 +6,8 @@ import it.unitn.disi.ds1.message.ops.read.ReadResultMessage;
 import it.unitn.disi.ds1.message.ops.read.ReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.ops.read.ReadMessage;
 import it.unitn.disi.ds1.message.ops.read.ReadResultCoordinatorMessage;
+import it.unitn.disi.ds1.message.ops.write.WriteCoordinatorMessage;
+import it.unitn.disi.ds1.message.ops.write.WriteMessage;
 import it.unitn.disi.ds1.message.txn.TxnAcceptMessage;
 import it.unitn.disi.ds1.message.txn.TxnBeginMessage;
 import it.unitn.disi.ds1.message.welcome.CoordinatorWelcomeMessage;
@@ -79,6 +81,7 @@ public final class Coordinator extends Actor {
                 .match(TxnBeginMessage.class, this::onTxnBeginMessage)
                 .match(ReadMessage.class, this::onReadMessage)
                 .match(ReadResultCoordinatorMessage.class, this::onReadResultCoordinatorMessage)
+                .match(WriteMessage.class, this::onWriteMessage)
                 .build();
     }
 
@@ -181,6 +184,21 @@ public final class Coordinator extends Actor {
         LOGGER.debug("Coordinator {} send ReadResultMessage: {}", id, outMessage);
     }
 
+    /**
+     * Callback for {@link WriteMessage} message.
+     *
+     * @param message Received message
+     */
+    private void onWriteMessage(WriteMessage message) {
+        LOGGER.debug("Coordinator {} received WriteMessage: {}", id, message);
+
+        final ActorRef dataStore = dataStoreByItemKey(message.key);
+        final WriteCoordinatorMessage outMessage = new WriteCoordinatorMessage(message.transactionId, message.key, message.value);
+        dataStore.tell(outMessage, getSelf());
+
+        LOGGER.debug("Coordinator {} send WriteCoordinatorMessage: {}", id, outMessage);
+    }
+
     /*-- Actor methods -------------------------------------------------------- */
     private boolean checkCommit() {
         for (Boolean decision : this.decisions) {
@@ -194,10 +212,6 @@ public final class Coordinator extends Actor {
     /*-- Message handlers ----------------------------------------------------- */
     /*private void onReadResultCoordMsg(ReadResultCoordMsg msg) {
         this.transactions.get(msg.transactionId).tell(new ReadResultMsg(msg.transactionId, msg.key, msg.value), getSelf());
-    }
-
-    private void onWriteMsg(WriteMsg msg) {
-        serverByKey(msg.key).tell(new WriteCoordMsg(msg.transactionId, msg.key, msg.value), getSelf());
     }
 
     private void onTxnEndMsg(TxnEndMsg msg) {
