@@ -2,8 +2,10 @@ package it.unitn.disi.ds1.actor;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
-import it.unitn.disi.ds1.message.*;
+import it.unitn.disi.ds1.message.op.ReadResultMessage;
+import it.unitn.disi.ds1.message.op.ReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.ReadMessage;
+import it.unitn.disi.ds1.message.op.ReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.txn.TxnAcceptMessage;
 import it.unitn.disi.ds1.message.txn.TxnBeginMessage;
 import it.unitn.disi.ds1.message.welcome.CoordinatorWelcomeMessage;
@@ -16,6 +18,17 @@ import java.util.*;
  * Coordinator {@link Actor actor} class.
  */
 public final class Coordinator extends Actor {
+    // TODO Let's see
+    private static class TxnMapping {
+        public final int clientId;
+        public final ActorRef actorRef;
+
+        public TxnMapping(int clientId, ActorRef actorRef) {
+            this.clientId = clientId;
+            this.actorRef = actorRef;
+        }
+    }
+
     /**
      * Logger.
      */
@@ -26,7 +39,11 @@ public final class Coordinator extends Actor {
      */
     private final List<ActorRef> dataStores;
 
-    private final HashMap<UUID, ActorRef> transactions;
+    /**
+     * Mapping between {@link UUID transactionId} and {@link TxnMapping}.
+     */
+    private final HashMap<UUID, TxnMapping> transactions;
+
     private final List<Boolean> decisions;
 
     // --- Constructors ---
@@ -61,10 +78,47 @@ public final class Coordinator extends Actor {
                 .match(CoordinatorWelcomeMessage.class, this::onCoordinatorWelcomeMessage)
                 .match(TxnBeginMessage.class, this::onTxnBeginMessage)
                 .match(ReadMessage.class, this::onReadMessage)
+                .match(ReadResultCoordinatorMessage.class, this::onReadResultCoordinatorMessage)
                 .build();
     }
 
     // --- Methods ---
+
+    /**
+     * Return {@link DataStore} {@link ActorRef} by {@link it.unitn.disi.ds1.Item} key.
+     *
+     * @param key Item key.
+     * @return DataStore actorRef
+     */
+    private ActorRef dataStoreByItemKey(int key) {
+        final ActorRef dataStore = dataStores.get(key / 10);
+
+        if (dataStore == null) {
+            LOGGER.error("Unable to find Data Store by Item key {}", key);
+            // FIXME Try with something compatible with Akka
+            System.exit(1);
+        }
+
+        return dataStore;
+    }
+
+    /**
+     * Return {@link TxnMapping} by {@link UUID transaction id}.
+     *
+     * @param transactionId Transaction id
+     * @return TxnMapping
+     */
+    private TxnMapping txnMappingByTransactionId(UUID transactionId) {
+        final TxnMapping txnMapping = transactions.get(transactionId);
+
+        if (txnMapping == null) {
+            LOGGER.error("Unable to find TxnMapping by transactionId {}", transactionId);
+            // FIXME Try with something compatible with Akka
+            System.exit(1);
+        }
+
+        return txnMapping;
+    }
 
     // --- Message handlers --
 
@@ -90,10 +144,11 @@ public final class Coordinator extends Actor {
         LOGGER.debug("Coordinator {} received TxnBeginMessage: {}", id, message);
 
         final UUID transactionId = UUID.randomUUID();
-        this.transactions.put(transactionId, getSender());
-        getSender().tell(new TxnAcceptMessage(transactionId), getSelf());
+        final TxnAcceptMessage outMessage = new TxnAcceptMessage(transactionId);
+        this.transactions.put(transactionId, new TxnMapping(message.clientId, getSender()));
+        getSender().tell(outMessage, getSelf());
 
-        LOGGER.info("Coordinator {} send TxnAcceptMessage to client {} with transactionId {}", id, message.clientId, transactionId);
+        LOGGER.debug("Coordinator {} send TxnAcceptMessage: {}", id, outMessage);
     }
 
     /**
@@ -104,16 +159,29 @@ public final class Coordinator extends Actor {
     private void onReadMessage(ReadMessage message) {
         LOGGER.debug("Coordinator {} received ReadMessage: {}", id, message);
 
+        final ActorRef dataStore = dataStoreByItemKey(message.key);
+        final ReadCoordinatorMessage outMessage = new ReadCoordinatorMessage(message.transactionId, message.key);
+        dataStore.tell(outMessage, getSelf());
 
+        LOGGER.debug("Coordinator {} send ReadCoordinatorMessage: {}", id, outMessage);
+    }
 
-        serverByKey(msg.key).tell(new ReadCoordMsg(msg.transactionId, msg.key), getSelf());
+    /**
+     * Callback for {@link ReadResultCoordinatorMessage} message.
+     *
+     * @param message Received message
+     */
+    private void onReadResultCoordinatorMessage(ReadResultCoordinatorMessage message) {
+        LOGGER.debug("Coordinator {} received ReadResultCoordinatorMessage: {}", id, message);
+
+        final TxnMapping txnMapping = txnMappingByTransactionId(message.transactionId);
+        final ReadResultMessage outMessage = new ReadResultMessage(message.transactionId, message.key, message.value);
+        txnMapping.actorRef.tell(outMessage, getSelf());
+
+        LOGGER.debug("Coordinator {} send ReadResultMessage: {}", id, outMessage);
     }
 
     /*-- Actor methods -------------------------------------------------------- */
-    private ActorRef serverByKey(int key) {
-        return dataStores.get(key / 10);
-    }
-
     private boolean checkCommit() {
         for (Boolean decision : this.decisions) {
             if (!decision) {
@@ -124,7 +192,7 @@ public final class Coordinator extends Actor {
     }
 
     /*-- Message handlers ----------------------------------------------------- */
-    private void onReadResultCoordMsg(ReadResultCoordMsg msg) {
+    /*private void onReadResultCoordMsg(ReadResultCoordMsg msg) {
         this.transactions.get(msg.transactionId).tell(new ReadResultMsg(msg.transactionId, msg.key, msg.value), getSelf());
     }
 
@@ -153,5 +221,5 @@ public final class Coordinator extends Actor {
             this.decisions.clear();
             this.transactions.remove(msg.transactionId);
         }
-    }
+    }*/
 }

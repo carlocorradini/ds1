@@ -6,7 +6,9 @@ import java.util.concurrent.TimeUnit;
 import akka.actor.*;
 import it.unitn.disi.ds1.message.*;
 import it.unitn.disi.ds1.message.op.ReadMessage;
+import it.unitn.disi.ds1.message.op.ReadResultMessage;
 import it.unitn.disi.ds1.message.txn.TxnAcceptMessage;
+import it.unitn.disi.ds1.message.txn.TxnAcceptTimeoutMessage;
 import it.unitn.disi.ds1.message.txn.TxnBeginMessage;
 import it.unitn.disi.ds1.message.welcome.ClientWelcomeMessage;
 import org.apache.logging.log4j.LogManager;
@@ -151,6 +153,8 @@ public final class Client extends Actor {
         return receiveBuilder()
                 .match(ClientWelcomeMessage.class, this::onClientWelcomeMessage)
                 .match(TxnAcceptMessage.class, this::onTxnAcceptMessage)
+                .match(TxnAcceptTimeoutMessage.class, this::onTxnAcceptTimeoutMessage)
+                .match(ReadResultMessage.class, this::onReadResultMessage)
                 .build();
     }
 
@@ -174,8 +178,10 @@ public final class Client extends Actor {
         txnAttempted++;
 
         // Contact a random coordinator and begin a transaction
+        final TxnBeginMessage outMessage = new TxnBeginMessage(id);
         txnCoordinator = coordinators.get(random.nextInt(coordinators.size()));
-        txnCoordinator.tell(new TxnBeginMessage(id), getSelf());
+        txnCoordinator.tell(outMessage, getSelf());
+        LOGGER.debug("Client {} send TxnBeginMessage: {}", id, outMessage);
 
         // Total number of operations
         final int txtOpExtra = RAND_LENGTH_RANGE > 0 ? random.nextInt(RAND_LENGTH_RANGE) : 0;
@@ -186,7 +192,7 @@ public final class Client extends Actor {
         txnAcceptTimeout = getContext().system().scheduler().scheduleOnce(
                 Duration.create(500, TimeUnit.MILLISECONDS),
                 getSelf(),
-                new TxnAcceptTimeoutMsg(), // message sent to myself
+                new TxnAcceptTimeoutMessage(),
                 getContext().system().dispatcher(),
                 getSelf()
         );
@@ -199,12 +205,14 @@ public final class Client extends Actor {
      */
     private void endTxn() {
         final boolean commit = random.nextDouble() < COMMIT_PROBABILITY;
+        final TxnEndMsg outMessage = new TxnEndMsg(txnId.orElseThrow(NullPointerException::new), id, commit);
 
-        txnCoordinator.tell(new TxnEndMsg(txnId.orElseThrow(NullPointerException::new), id, commit), getSelf());
+        txnCoordinator.tell(outMessage, getSelf());
         txnFirstValue = null;
         txnSecondValue = null;
         txnId = Optional.empty();
 
+        LOGGER.debug("Client {} send TxnEndMessage: {}", id, outMessage);
         LOGGER.info("Client {} END transaction", id);
     }
 
@@ -217,9 +225,14 @@ public final class Client extends Actor {
         final int randKeyOffset = 1 + random.nextInt(maxItemKey - 1);
         txnSecondKey = (txnFirstKey + randKeyOffset) % (maxItemKey + 1);
 
-        // Read requests
-        txnCoordinator.tell(new ReadMessage(txnId.orElseThrow(NullPointerException::new), id, txnFirstKey), getSelf());
-        txnCoordinator.tell(new ReadMessage(txnId.orElseThrow(NullPointerException::new), id, txnSecondKey), getSelf());
+        // Read request 1
+        final ReadMessage outFirstMessage = new ReadMessage(txnId.orElseThrow(NullPointerException::new), id, txnFirstKey);
+        txnCoordinator.tell(outFirstMessage, getSelf());
+        LOGGER.debug("Client {} send ReadMessage: {}", id, outFirstMessage);
+        // Read request 2
+        final ReadMessage outSecondMessage = new ReadMessage(txnId.orElseThrow(NullPointerException::new), id, txnSecondKey);
+        txnCoordinator.tell(outSecondMessage, getSelf());
+        LOGGER.debug("Client {} send ReadMessage: {}", id, outSecondMessage);
 
         // Delete the current read values
         txnFirstValue = null;
@@ -239,9 +252,14 @@ public final class Client extends Actor {
         // New second value
         final int newSecondValue = txnSecondValue + amount;
 
-        // Write requests
-        txnCoordinator.tell(new WriteMsg(txnId.orElseThrow(NullPointerException::new), id, txnFirstKey, newFirstValue), getSelf());
-        txnCoordinator.tell(new WriteMsg(txnId.orElseThrow(NullPointerException::new), id, txnSecondKey, newSecondValue), getSelf());
+        // Write request 1
+        final WriteMsg outFirstMessage = new WriteMsg(txnId.orElseThrow(NullPointerException::new), id, txnFirstKey, newFirstValue);
+        txnCoordinator.tell(outFirstMessage, getSelf());
+        LOGGER.debug("Client {} send WriteMessage: {}", id, outFirstMessage);
+        // Write request 2
+        final WriteMsg outSecondMessage = new WriteMsg(txnId.orElseThrow(NullPointerException::new), id, txnSecondKey, newSecondValue);
+        txnCoordinator.tell(outSecondMessage, getSelf());
+        LOGGER.debug("Client {} send WriteMessage: {}", id, outSecondMessage);
 
         LOGGER.info("Client {} WRITE #{} taken {} ({}, {}), ({}, {})", id, txnOpDone, amount, txnFirstKey, newFirstValue, txnSecondKey, newSecondValue);
     }
@@ -281,38 +299,50 @@ public final class Client extends Actor {
         readTwo();
     }
 
-    /*-- Message handlers ----------------------------------------------------- */
-    private void onStopMsg(StopMsg msg) {
-        getContext().stop(getSelf());
+    /**
+     * Callback for {@link TxnAcceptTimeoutMessage} message.
+     *
+     * @param message Received message
+     */
+    private void onTxnAcceptTimeoutMessage(TxnAcceptTimeoutMessage message) {
+        LOGGER.debug("Client {} received TxnAcceptTimeoutMessage", id);
+
+        if (!txnAccepted) {
+            LOGGER.debug("Client {} start a new transaction due to timeout", id);
+            beginTxn();
+        }
     }
 
-    private void onTxnAcceptTimeoutMsg(TxnAcceptTimeoutMsg msg) {
-        if (!txnAccepted) beginTxn();
-    }
-
-    private void onReadResultMsg(ReadResultMsg msg) {
-        System.out.printf("%s READ RESULT (%d, %d)%n", getSelf().path().name(), msg.key, msg.value);
+    /**
+     * Callback for {@link ReadResultMessage} message.
+     *
+     * @param message Received message
+     */
+    private void onReadResultMessage(ReadResultMessage message) {
+        LOGGER.debug("Client {} received ReadResultMessage: {}", id, message);
 
         // Save read value(s)
-        if (msg.key == txnFirstKey) txnFirstValue = msg.value;
-        if (msg.key == txnSecondKey) txnSecondValue = msg.value;
+        if (message.key == txnFirstKey) txnFirstValue = message.value;
+        else if (message.key == txnSecondKey) txnSecondValue = message.value;
 
-        boolean opDone = (txnFirstValue != null && txnSecondValue != null);
+        final boolean opDone = (txnFirstValue != null && txnSecondValue != null);
 
-        // do we only read or also write?
-        double writeRandom = random.nextDouble();
-        boolean doWrite = writeRandom < WRITE_PROBABILITY;
+        // Read or also write?
+        final boolean doWrite = random.nextDouble() < WRITE_PROBABILITY;
         if (doWrite && opDone) writeTwo();
 
-        // check if the transaction should end;
-        // otherwise, read two again
+        // Check if transaction should end, otherwise read again
         if (opDone) txnOpDone++;
-
         if (txnOpDone >= txnOpTotal) {
             endTxn();
         } else if (opDone) {
             readTwo();
         }
+    }
+
+    /*-- Message handlers ----------------------------------------------------- */
+    private void onStopMsg(StopMsg msg) {
+        getContext().stop(getSelf());
     }
 
     private void onTxnResultMsg(TxnResultMsg msg) {

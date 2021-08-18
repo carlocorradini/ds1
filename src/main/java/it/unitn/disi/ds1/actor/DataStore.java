@@ -4,6 +4,8 @@ import akka.actor.Props;
 import it.unitn.disi.ds1.Item;
 import it.unitn.disi.ds1.WriteRequest;
 import it.unitn.disi.ds1.message.*;
+import it.unitn.disi.ds1.message.op.ReadCoordinatorMessage;
+import it.unitn.disi.ds1.message.op.ReadResultCoordinatorMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -53,7 +55,7 @@ public final class DataStore extends Actor {
     @Override
     public Receive createReceive() {
         return receiveBuilder()
-                .match(ReadCoordMsg.class, this::onReadCoordMsg)
+                .match(ReadCoordinatorMessage.class, this::onReadCoordinatorMessage)
                 .match(WriteCoordMsg.class, this::onWriteCoordMsg)
                 .match(RequestMsg.class, this::onRequestMsg)
                 .match(DecisionMsg.class, this::onDecisionMsg)
@@ -62,7 +64,40 @@ public final class DataStore extends Actor {
 
     // --- Methods ---
 
+    /**
+     * Return {@link Item} by key.
+     *
+     * @param key Item key
+     * @return Item
+     */
+    private Item itemByKey(int key) {
+        final Item item = dataStore.get(key);
+
+        if (item == null) {
+            LOGGER.error("Unable to find Item by key {}", key);
+            // FIXME Try with something compatible with Akka
+            System.exit(1);
+        }
+
+        return item;
+    }
+
     // --- Message handlers ---
+
+    /**
+     * Callback for {@link ReadCoordinatorMessage} message.
+     *
+     * @param message Received message
+     */
+    private void onReadCoordinatorMessage(ReadCoordinatorMessage message) {
+        LOGGER.debug("DataStore {} received ReadCoordinatorMessage: {}", id, message);
+
+        final Item item = itemByKey(message.key);
+        final ReadResultCoordinatorMessage outMessage = new ReadResultCoordinatorMessage(message.transactionId, message.key, item.value);
+        getSender().tell(outMessage, getSelf());
+
+        LOGGER.debug("DataStore {} send ReadResultCoordinatorMessage: {}", id, outMessage);
+    }
 
     /*-- Actor methods -------------------------------------------------------- */
     private boolean checkVersion(UUID transactionId) {
@@ -83,11 +118,6 @@ public final class DataStore extends Actor {
     }
 
     /*-- Message handlers ----------------------------------------------------- */
-
-    private void onReadCoordMsg(ReadCoordMsg msg) {
-        getSender().tell(new ReadResultCoordMsg(msg.transactionId, msg.key, this.dataStore.get(msg.key).value), getSelf());
-    }
-
     private void onWriteCoordMsg(WriteCoordMsg msg) {
         // Add write request to workspace
         this.workspace.add(new WriteRequest(msg.transactionId, msg.key, this.dataStore.get(msg.key).version, msg.value));
