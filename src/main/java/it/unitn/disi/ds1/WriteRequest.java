@@ -3,14 +3,12 @@ package it.unitn.disi.ds1;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
-import it.unitn.disi.ds1.actor.DataStore;
 
 import java.util.UUID;
 
 /**
- * Write request stored in workspace by {@link DataStore}.
+ * Write request stored in a workspace.
  */
-
 public final class WriteRequest {
     /**
      * Gson instance.
@@ -20,7 +18,7 @@ public final class WriteRequest {
             .create();
 
     /**
-     * Transaction ide.
+     * Transaction id.
      */
     @Expose
     public final UUID transactionId;
@@ -44,12 +42,12 @@ public final class WriteRequest {
     public final int newValue;
 
     /**
-     * Construct an item with the given value and version.
+     * Construct a new WriteRequest class.
      *
-     * @param transactionId   Transaction id
-     * @param key Item key
+     * @param transactionId Transaction id
+     * @param key           Item key
      * @param actualVersion Item actual version
-     * @param newValue New item value
+     * @param newValue      New item value
      */
     public WriteRequest(UUID transactionId, int key, int actualVersion, int newValue) {
         this.transactionId = transactionId;
@@ -59,5 +57,7 @@ public final class WriteRequest {
     }
 
     @Override
-    public String toString() { return GSON.toJson(this); }
+    public String toString() {
+        return GSON.toJson(this);
+    }
 }
