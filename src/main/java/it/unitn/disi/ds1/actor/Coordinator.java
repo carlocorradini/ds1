@@ -3,6 +3,7 @@ package it.unitn.disi.ds1.actor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import it.unitn.disi.ds1.message.*;
+import it.unitn.disi.ds1.message.op.ReadMessage;
 import it.unitn.disi.ds1.message.txn.TxnAcceptMessage;
 import it.unitn.disi.ds1.message.txn.TxnBeginMessage;
 import it.unitn.disi.ds1.message.welcome.CoordinatorWelcomeMessage;
@@ -59,6 +60,7 @@ public final class Coordinator extends Actor {
         return receiveBuilder()
                 .match(CoordinatorWelcomeMessage.class, this::onCoordinatorWelcomeMessage)
                 .match(TxnBeginMessage.class, this::onTxnBeginMessage)
+                .match(ReadMessage.class, this::onReadMessage)
                 .build();
     }
 
@@ -94,6 +96,19 @@ public final class Coordinator extends Actor {
         LOGGER.info("Coordinator {} send TxnAcceptMessage to client {} with transactionId {}", id, message.clientId, transactionId);
     }
 
+    /**
+     * Callback for {@link ReadMessage} message.
+     *
+     * @param message Received message
+     */
+    private void onReadMessage(ReadMessage message) {
+        LOGGER.debug("Coordinator {} received ReadMessage: {}", id, message);
+
+
+
+        serverByKey(msg.key).tell(new ReadCoordMsg(msg.transactionId, msg.key), getSelf());
+    }
+
     /*-- Actor methods -------------------------------------------------------- */
     private ActorRef serverByKey(int key) {
         return dataStores.get(key / 10);
@@ -109,10 +124,6 @@ public final class Coordinator extends Actor {
     }
 
     /*-- Message handlers ----------------------------------------------------- */
-    private void onReadMsg(ReadMsg msg) {
-        serverByKey(msg.key).tell(new ReadCoordMsg(msg.transactionId, msg.key), getSelf());
-    }
-
     private void onReadResultCoordMsg(ReadResultCoordMsg msg) {
         this.transactions.get(msg.transactionId).tell(new ReadResultMsg(msg.transactionId, msg.key, msg.value), getSelf());
     }

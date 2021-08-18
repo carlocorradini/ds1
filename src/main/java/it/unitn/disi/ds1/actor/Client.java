@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit;
 
 import akka.actor.*;
 import it.unitn.disi.ds1.message.*;
+import it.unitn.disi.ds1.message.op.ReadMessage;
 import it.unitn.disi.ds1.message.txn.TxnAcceptMessage;
 import it.unitn.disi.ds1.message.txn.TxnBeginMessage;
 import it.unitn.disi.ds1.message.welcome.ClientWelcomeMessage;
@@ -149,6 +150,7 @@ public final class Client extends Actor {
     public Receive createReceive() {
         return receiveBuilder()
                 .match(ClientWelcomeMessage.class, this::onClientWelcomeMessage)
+                .match(TxnAcceptMessage.class, this::onTxnAcceptMessage)
                 .build();
     }
 
@@ -216,8 +218,8 @@ public final class Client extends Actor {
         txnSecondKey = (txnFirstKey + randKeyOffset) % (maxItemKey + 1);
 
         // Read requests
-        txnCoordinator.tell(new ReadMsg(txnId.orElseThrow(NullPointerException::new), id, txnFirstKey), getSelf());
-        txnCoordinator.tell(new ReadMsg(txnId.orElseThrow(NullPointerException::new), id, txnSecondKey), getSelf());
+        txnCoordinator.tell(new ReadMessage(txnId.orElseThrow(NullPointerException::new), id, txnFirstKey), getSelf());
+        txnCoordinator.tell(new ReadMessage(txnId.orElseThrow(NullPointerException::new), id, txnSecondKey), getSelf());
 
         // Delete the current read values
         txnFirstValue = null;
@@ -264,18 +266,24 @@ public final class Client extends Actor {
         beginTxn();
     }
 
-    /*-- Message handlers ----------------------------------------------------- */
-    private void onStopMsg(StopMsg msg) {
-        getContext().stop(getSelf());
-    }
+    /**
+     * Callback for {@link TxnAcceptMessage} message.
+     *
+     * @param message Received message
+     */
+    private void onTxnAcceptMessage(TxnAcceptMessage message) {
+        LOGGER.debug("Client {} received TxnAcceptMessage: {}", id, message);
 
-    private void onTxnAcceptMsg(TxnAcceptMessage msg) {
-        txnId = Optional.of(msg.transactionId);
+        txnId = Optional.of(message.transactionId);
         txnAccepted = true;
         txnAcceptTimeout.cancel();
 
-        System.out.printf("Transaction accepted by %s with id %s%n", getSender().path().name(), txnId.orElseThrow(NullPointerException::new));
         readTwo();
+    }
+
+    /*-- Message handlers ----------------------------------------------------- */
+    private void onStopMsg(StopMsg msg) {
+        getContext().stop(getSelf());
     }
 
     private void onTxnAcceptTimeoutMsg(TxnAcceptTimeoutMsg msg) {
