@@ -135,7 +135,7 @@ public final class DataStore extends Actor {
         final Item newItem = new Item(message.value, oldItem.version);
         workspace.put(message.key, newItem);
 
-        LOGGER.info("DataStore {} stored write request: {}", id, newItem);
+        LOGGER.info("DataStore {} write request workspace in transaction {}: {}", id, message.transactionId, newItem);
     }
 
     /*-- Actor methods -------------------------------------------------------- */
