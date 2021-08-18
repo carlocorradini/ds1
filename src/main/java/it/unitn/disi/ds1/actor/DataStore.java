@@ -108,7 +108,7 @@ public final class DataStore extends Actor {
     private void onWriteCoordinatorMessage(WriteCoordinatorMessage message) {
         LOGGER.debug("DataStore {} received WriteCoordinatorMessage: {}", id, message);
 
-        final WriteRequest writeRequest = new WriteRequest(message.transactionId, message.key, this.dataStore.get(message.key).version, message.value)
+        final WriteRequest writeRequest = new WriteRequest(message.transactionId, message.key, this.dataStore.get(message.key).version, message.value);
         this.workspace.add(writeRequest);
 
         LOGGER.info("DataStore {} stored in workspace write request: {}", id, writeRequest);
