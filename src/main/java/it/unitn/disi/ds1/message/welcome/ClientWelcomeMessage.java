@@ -7,6 +7,8 @@ import com.google.gson.annotations.Expose;
 import it.unitn.disi.ds1.adapter.serializer.ActorRefSerializer;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -42,7 +44,7 @@ public final class ClientWelcomeMessage implements Serializable {
      * @param maxItemKey   Maximum {@link it.unitn.disi.ds1.Item Item} key
      */
     public ClientWelcomeMessage(List<ActorRef> coordinators, int maxItemKey) {
-        this.coordinators = List.copyOf(coordinators);
+        this.coordinators = Collections.unmodifiableList(coordinators);
         this.maxItemKey = maxItemKey;
     }
 

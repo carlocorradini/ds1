@@ -2,8 +2,6 @@ package it.unitn.disi.ds1.actor;
 
 import akka.actor.Props;
 import it.unitn.disi.ds1.Item;
-import it.unitn.disi.ds1.WriteRequest;
-import it.unitn.disi.ds1.message.*;
 import it.unitn.disi.ds1.message.ops.read.ReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.ops.read.ReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.ops.write.WriteCoordinatorMessage;
@@ -22,8 +20,17 @@ public final class DataStore extends Actor {
      */
     private static final Logger LOGGER = LogManager.getLogger(DataStore.class);
 
-    private final HashMap<Integer, Item> dataStore;
-    private final List<WriteRequest> workspace; //Better data structure Hashmap<UUID, ArrayList<WriteRequest>>?
+    /**
+     * Storage used for persistency.
+     */
+    private final Map<Integer, Item> storage;
+
+    /**
+     * Private workspace for each transaction.
+     * Key is the transaction id.
+     * Value is all the modified Item(s) identified by the key.
+     */
+    private final Map<UUID, Map<Integer, Item>> workspaces;
 
     // --- Constructors ---
 
@@ -34,13 +41,13 @@ public final class DataStore extends Actor {
      */
     public DataStore(int id) {
         super(id);
-        LOGGER.debug("DataStore {} initialized", id);
-
-        this.dataStore = new HashMap<>();
-        this.workspace = new ArrayList<>();
+        this.storage = new HashMap<>();
+        this.workspaces = new HashMap<>();
 
         // Initialize items
-        IntStream.range(id * 10, (id * 10) + 10).forEach(i -> dataStore.put(i, new Item()));
+        IntStream.range(id * 10, (id * 10) + 10).forEach(i -> storage.put(i, new Item()));
+
+        LOGGER.debug("DataStore {} initialized", id);
     }
 
     /**
@@ -58,8 +65,8 @@ public final class DataStore extends Actor {
         return receiveBuilder()
                 .match(ReadCoordinatorMessage.class, this::onReadCoordinatorMessage)
                 .match(WriteCoordinatorMessage.class, this::onWriteCoordinatorMessage)
-                .match(RequestMsg.class, this::onRequestMsg)
-                .match(DecisionMsg.class, this::onDecisionMsg)
+                /*.match(RequestMsg.class, this::onRequestMsg)
+                .match(DecisionMsg.class, this::onDecisionMsg)*/
                 .build();
     }
 
@@ -72,7 +79,7 @@ public final class DataStore extends Actor {
      * @return Item
      */
     private Item itemByKey(int key) {
-        final Item item = dataStore.get(key);
+        final Item item = storage.get(key);
 
         if (item == null) {
             LOGGER.error("Unable to find Item by key {}", key);
@@ -93,7 +100,20 @@ public final class DataStore extends Actor {
     private void onReadCoordinatorMessage(ReadCoordinatorMessage message) {
         LOGGER.debug("DataStore {} received ReadCoordinatorMessage: {}", id, message);
 
-        final Item item = itemByKey(message.key);
+        final Item item;
+
+        // Obtain item for the current transaction
+        final Map<Integer, Item> workspace = workspaces.get(message.transactionId);
+        if (workspace != null && workspace.containsKey(message.key)) {
+            // Item in workspace
+            item = workspace.get(message.key);
+            LOGGER.trace("DataStore {} ReadCoordinatorMessage item {} in transaction {} found in workspace: {}", id, message.key, message.transactionId, item);
+        } else {
+            // Item in storage
+            item = itemByKey(message.key);
+            LOGGER.trace("DataStore {} ReadCoordinatorMessage item {} in transaction {} found in storage: {}", id, message.key, message.transactionId, item);
+        }
+
         final ReadResultCoordinatorMessage outMessage = new ReadResultCoordinatorMessage(message.transactionId, message.key, item.value);
         getSender().tell(outMessage, getSelf());
 
@@ -108,16 +128,20 @@ public final class DataStore extends Actor {
     private void onWriteCoordinatorMessage(WriteCoordinatorMessage message) {
         LOGGER.debug("DataStore {} received WriteCoordinatorMessage: {}", id, message);
 
-        final WriteRequest writeRequest = new WriteRequest(message.transactionId, message.key, this.dataStore.get(message.key).version, message.value);
-        this.workspace.add(writeRequest);
+        // Obtain private workspace, otherwise create
+        final Map<Integer, Item> workspace = workspaces.computeIfAbsent(message.transactionId, k -> new HashMap<>());
+        // Add new item to workspace
+        final Item oldItem = itemByKey(message.key);
+        final Item newItem = new Item(message.value, oldItem.version);
+        workspace.put(message.key, newItem);
 
-        LOGGER.info("DataStore {} stored in workspace write request: {}", id, writeRequest);
+        LOGGER.info("DataStore {} stored write request: {}", id, newItem);
     }
 
     /*-- Actor methods -------------------------------------------------------- */
-    private boolean checkVersion(UUID transactionId) {
+    /*private boolean checkVersion(UUID transactionId) {
         for (WriteRequest i : this.workspace) {
-            if (i.transactionId.equals(transactionId) && i.actualVersion != this.dataStore.get(i.key).version) {
+            if (i.transactionId.equals(transactionId) && i.actualVersion != this.storage.get(i.key).version) {
                 return false;
             }
         }
@@ -127,13 +151,13 @@ public final class DataStore extends Actor {
     private void applyChanges(UUID transactionId) {
         for (WriteRequest i : this.workspace) {
             if (i.transactionId.equals(transactionId)) {
-                this.dataStore.put(i.key, new Item(i.newValue, this.dataStore.get(i.key).version + 1));
+                this.storage.put(i.key, new Item(i.newValue, this.storage.get(i.key).version + 1));
             }
         }
     }
 
     /*-- Message handlers ----------------------------------------------------- */
-
+    /*
     private void onRequestMsg(RequestMsg msg) {
         if (msg.decision) {
             // Return to coordinator Yes or No
@@ -150,9 +174,9 @@ public final class DataStore extends Actor {
         if (msg.decision) {
             // Apply changes if Commit
             applyChanges(msg.transactionId);
-            System.out.printf("%s new values stored!\n%s\n", getSelf().path().name(), this.dataStore);
+            System.out.printf("%s new values stored!\n%s\n", getSelf().path().name(), this.storage);
         }
         // Discard changes if Abort or Clear workspace
         this.workspace.removeIf(i -> i.transactionId.equals(msg.transactionId));
-    }
+    }*/
 }
