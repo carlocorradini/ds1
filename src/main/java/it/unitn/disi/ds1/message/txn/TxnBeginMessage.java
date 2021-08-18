@@ -26,7 +26,7 @@ public final class TxnBeginMessage implements Serializable {
     public final int clientId;
 
     /**
-     * Construct a new TxnBeginMsg class.
+     * Construct a new TxnBeginMessage class.
      *
      * @param clientId Client id
      */

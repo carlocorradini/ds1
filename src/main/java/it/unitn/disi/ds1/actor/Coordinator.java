@@ -3,6 +3,7 @@ package it.unitn.disi.ds1.actor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import it.unitn.disi.ds1.message.*;
+import it.unitn.disi.ds1.message.txn.TxnAcceptMessage;
 import it.unitn.disi.ds1.message.txn.TxnBeginMessage;
 import it.unitn.disi.ds1.message.welcome.CoordinatorWelcomeMessage;
 import org.apache.logging.log4j.LogManager;
@@ -71,7 +72,7 @@ public final class Coordinator extends Actor {
      * @param message Received message
      */
     private void onCoordinatorWelcomeMessage(CoordinatorWelcomeMessage message) {
-        LOGGER.debug("Coordinator {} received welcome message: {}", id, message);
+        LOGGER.debug("Coordinator {} received CoordinatorWelcomeMessage: {}", id, message);
 
         // Data Stores
         dataStores.clear();
@@ -84,13 +85,13 @@ public final class Coordinator extends Actor {
      * @param message Received message
      */
     private void onTxnBeginMessage(TxnBeginMessage message) {
-        LOGGER.debug("Coordinator {} received txn begin message: {}", id, message);
+        LOGGER.debug("Coordinator {} received TxnBeginMessage: {}", id, message);
 
         final UUID transactionId = UUID.randomUUID();
         this.transactions.put(transactionId, getSender());
-        getSender().tell(new TxnAcceptMsg(transactionId), getSelf());
+        getSender().tell(new TxnAcceptMessage(transactionId), getSelf());
 
-        LOGGER.info("Coordinator {} txnId {} for client {}", id, transactionId, message.clientId);
+        LOGGER.info("Coordinator {} send TxnAcceptMessage to client {} with transactionId {}", id, message.clientId, transactionId);
     }
 
     /*-- Actor methods -------------------------------------------------------- */

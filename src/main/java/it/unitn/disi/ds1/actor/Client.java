@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit;
 
 import akka.actor.*;
 import it.unitn.disi.ds1.message.*;
+import it.unitn.disi.ds1.message.txn.TxnAcceptMessage;
 import it.unitn.disi.ds1.message.txn.TxnBeginMessage;
 import it.unitn.disi.ds1.message.welcome.ClientWelcomeMessage;
 import org.apache.logging.log4j.LogManager;
@@ -251,7 +252,7 @@ public final class Client extends Actor {
      * @param message Received message
      */
     private void onClientWelcomeMessage(ClientWelcomeMessage message) {
-        LOGGER.debug("Client {} received welcome message: {}", id, message);
+        LOGGER.debug("Client {} received ClientWelcomeMessage: {}", id, message);
 
         // Coordinators
         coordinators.clear();
@@ -268,7 +269,7 @@ public final class Client extends Actor {
         getContext().stop(getSelf());
     }
 
-    private void onTxnAcceptMsg(TxnAcceptMsg msg) {
+    private void onTxnAcceptMsg(TxnAcceptMessage msg) {
         txnId = Optional.of(msg.transactionId);
         txnAccepted = true;
         txnAcceptTimeout.cancel();
