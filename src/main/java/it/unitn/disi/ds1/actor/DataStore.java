@@ -6,6 +6,7 @@ import it.unitn.disi.ds1.WriteRequest;
 import it.unitn.disi.ds1.message.*;
 import it.unitn.disi.ds1.message.ops.read.ReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.ops.read.ReadResultCoordinatorMessage;
+import it.unitn.disi.ds1.message.ops.write.WriteCoordinatorMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -56,7 +57,7 @@ public final class DataStore extends Actor {
     public Receive createReceive() {
         return receiveBuilder()
                 .match(ReadCoordinatorMessage.class, this::onReadCoordinatorMessage)
-                .match(WriteCoordMsg.class, this::onWriteCoordMsg)
+                .match(WriteCoordinatorMessage.class, this::onWriteCoordinatorMessage)
                 .match(RequestMsg.class, this::onRequestMsg)
                 .match(DecisionMsg.class, this::onDecisionMsg)
                 .build();
@@ -99,6 +100,20 @@ public final class DataStore extends Actor {
         LOGGER.debug("DataStore {} send ReadResultCoordinatorMessage: {}", id, outMessage);
     }
 
+    /**
+     * Callback for {@link WriteCoordinatorMessage} message.
+     *
+     * @param message Received message
+     */
+    private void onWriteCoordinatorMessage(WriteCoordinatorMessage message) {
+        LOGGER.debug("DataStore {} received WriteCoordinatorMessage: {}", id, message);
+
+        final WriteRequest writeRequest = new WriteRequest(message.transactionId, message.key, this.dataStore.get(message.key).version, message.value)
+        this.workspace.add(writeRequest);
+
+        LOGGER.info("DataStore {} stored in workspace write request: {}", id, writeRequest);
+    }
+
     /*-- Actor methods -------------------------------------------------------- */
     private boolean checkVersion(UUID transactionId) {
         for (WriteRequest i : this.workspace) {
@@ -118,11 +133,6 @@ public final class DataStore extends Actor {
     }
 
     /*-- Message handlers ----------------------------------------------------- */
-    private void onWriteCoordMsg(WriteCoordMsg msg) {
-        // Add write request to workspace
-        this.workspace.add(new WriteRequest(msg.transactionId, msg.key, this.dataStore.get(msg.key).version, msg.value));
-        // System.out.println(this.workspace);
-    }
 
     private void onRequestMsg(RequestMsg msg) {
         if (msg.decision) {
