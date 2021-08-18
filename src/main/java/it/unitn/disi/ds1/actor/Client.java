@@ -191,7 +191,7 @@ public final class Client extends Actor {
 
         // Timeout confirmation of transaction by coordinator
         txnAcceptTimeout = getContext().system().scheduler().scheduleOnce(
-                Duration.create(500, TimeUnit.MILLISECONDS),
+                Duration.create(2500, TimeUnit.MILLISECONDS),
                 getSelf(),
                 new TxnAcceptTimeoutMessage(),
                 getContext().system().dispatcher(),
@@ -265,6 +265,14 @@ public final class Client extends Actor {
         LOGGER.debug("Client {} send WriteMessage: {}", id, outSecondMessage);
 
         LOGGER.info("Client {} WRITE #{} taken {} ({}, {}), ({}, {})", id, txnOpDone, amount, txnFirstKey, newFirstValue, txnSecondKey, newSecondValue);
+
+        // FIXME Elimina please
+        try {
+            Thread.sleep(2500);
+            readTwo();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     // --- Message handlers ---
@@ -339,7 +347,7 @@ public final class Client extends Actor {
         if (txnOpDone >= txnOpTotal) {
             endTxn();
         } else if (opDone) {
-            readTwo();
+            //readTwo();
         }
     }
 

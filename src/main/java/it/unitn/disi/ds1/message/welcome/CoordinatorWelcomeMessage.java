@@ -7,6 +7,7 @@ import com.google.gson.annotations.Expose;
 import it.unitn.disi.ds1.adapter.serializer.ActorRefSerializer;
 
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -35,7 +36,7 @@ public final class CoordinatorWelcomeMessage implements Serializable {
      * @param dataStores List of available {@link it.unitn.disi.ds1.actor.DataStore DataStore(s)}
      */
     public CoordinatorWelcomeMessage(List<ActorRef> dataStores) {
-        this.dataStores = List.copyOf(dataStores);
+        this.dataStores = Collections.unmodifiableList(dataStores);
     }
 
     @Override

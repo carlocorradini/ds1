@@ -200,14 +200,14 @@ public final class Coordinator extends Actor {
     }
 
     /*-- Actor methods -------------------------------------------------------- */
-    private boolean checkCommit() {
+    /*private boolean checkCommit() {
         for (Boolean decision : this.decisions) {
             if (!decision) {
                 return false;
             }
         }
         return true;
-    }
+    }*/
 
     /*-- Message handlers ----------------------------------------------------- */
     /*private void onReadResultCoordMsg(ReadResultCoordMsg msg) {
