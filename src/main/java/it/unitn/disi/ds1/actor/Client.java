@@ -5,8 +5,8 @@ import java.util.concurrent.TimeUnit;
 
 import akka.actor.*;
 import it.unitn.disi.ds1.message.*;
-import it.unitn.disi.ds1.message.op.ReadMessage;
-import it.unitn.disi.ds1.message.op.ReadResultMessage;
+import it.unitn.disi.ds1.message.ops.read.ReadMessage;
+import it.unitn.disi.ds1.message.ops.read.ReadResultMessage;
 import it.unitn.disi.ds1.message.txn.TxnAcceptMessage;
 import it.unitn.disi.ds1.message.txn.TxnAcceptTimeoutMessage;
 import it.unitn.disi.ds1.message.txn.TxnBeginMessage;

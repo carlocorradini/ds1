@@ -2,10 +2,10 @@ package it.unitn.disi.ds1.actor;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
-import it.unitn.disi.ds1.message.op.ReadResultMessage;
-import it.unitn.disi.ds1.message.op.ReadCoordinatorMessage;
-import it.unitn.disi.ds1.message.op.ReadMessage;
-import it.unitn.disi.ds1.message.op.ReadResultCoordinatorMessage;
+import it.unitn.disi.ds1.message.ops.read.ReadResultMessage;
+import it.unitn.disi.ds1.message.ops.read.ReadCoordinatorMessage;
+import it.unitn.disi.ds1.message.ops.read.ReadMessage;
+import it.unitn.disi.ds1.message.ops.read.ReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.txn.TxnAcceptMessage;
 import it.unitn.disi.ds1.message.txn.TxnBeginMessage;
 import it.unitn.disi.ds1.message.welcome.CoordinatorWelcomeMessage;

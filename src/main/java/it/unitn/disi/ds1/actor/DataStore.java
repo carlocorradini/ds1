@@ -4,8 +4,8 @@ import akka.actor.Props;
 import it.unitn.disi.ds1.Item;
 import it.unitn.disi.ds1.WriteRequest;
 import it.unitn.disi.ds1.message.*;
-import it.unitn.disi.ds1.message.op.ReadCoordinatorMessage;
-import it.unitn.disi.ds1.message.op.ReadResultCoordinatorMessage;
+import it.unitn.disi.ds1.message.ops.read.ReadCoordinatorMessage;
+import it.unitn.disi.ds1.message.ops.read.ReadResultCoordinatorMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
