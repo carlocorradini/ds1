@@ -5,7 +5,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 
 /**
@@ -35,23 +34,16 @@ public abstract class Actor extends AbstractActor {
     public Actor(int id) {
         this.id = id;
 
-        // Try initialize random (secure)
-        SecureRandom secureRandom = null;
+        // Initialize secure random
+        SecureRandom sr = null;
         try {
-            // Custom RNG
-            secureRandom = SecureRandom.getInstance("SHA1PRNG", "SUN");
-        } catch (NoSuchAlgorithmException | NoSuchProviderException e) {
-            LOGGER.warn("Secure Random Number Generator (RNG) `SHA1PRNG:SUN` not found: {}", e.getMessage());
-            try {
-                // Default RNG
-                secureRandom = SecureRandom.getInstanceStrong();
-            } catch (NoSuchAlgorithmException eDefault) {
-                LOGGER.error("Secure Random Number Generator (RNG) not found: {}", eDefault.getMessage());
-                eDefault.printStackTrace();
-                // FIXME Try with something compatible with Akka
-                System.exit(1);
-            }
+            sr = SecureRandom.getInstanceStrong();
+        } catch (NoSuchAlgorithmException e) {
+            LOGGER.error("Secure Random Number Generator (RNG) not found: {}", e.getMessage());
+            e.printStackTrace();
+            // FIXME Try with something compatible with Akka
+            System.exit(1);
         }
-        this.random = secureRandom;
+        this.random = sr;
     }
 }
