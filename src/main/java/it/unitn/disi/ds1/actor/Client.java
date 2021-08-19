@@ -154,7 +154,7 @@ public final class Client extends Actor {
                 .match(TxnAcceptMessage.class, this::onTxnAcceptMessage)
                 .match(TxnAcceptTimeoutMessage.class, this::onTxnAcceptTimeoutMessage)
                 .match(ReadResultMessage.class, this::onReadResultMessage)
-                .match(TxnResultMessage.class,  this::onTxnResultMsg)
+                .match(TxnResultMessage.class, this::onTxnResultMsg)
                 .build();
     }
 
@@ -353,7 +353,6 @@ public final class Client extends Actor {
         if (message.commit) {
             txnCommitted++;
             LOGGER.info("Client {} TXNs COMMIT OK ({}/{})", id, txnCommitted, txnAttempted);
-            System.out.printf("%s COMMIT OK (%d/%d)%n", getSelf().path().name(), txnCommitted, txnAttempted);
         } else {
             int txnFailed = txnAttempted - txnCommitted;
             LOGGER.info("Client {} TXNs COMMIT FAIL ({}/{})", id, txnFailed, txnAttempted);

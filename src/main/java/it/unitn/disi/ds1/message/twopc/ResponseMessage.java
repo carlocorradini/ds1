@@ -11,7 +11,6 @@ import java.util.UUID;
  * Reply from {@link it.unitn.disi.ds1.actor.DataStore} to {@link it.unitn.disi.ds1.actor.Coordinator}
  * with Yes or No decision for committing
  */
-
 public final class ResponseMessage extends TwoPCMessage implements Serializable {
     private static final long serialVersionUID = 4917833122149828262L;
 
@@ -26,7 +25,7 @@ public final class ResponseMessage extends TwoPCMessage implements Serializable 
      * Construct a new ResponseMessage class.
      *
      * @param transactionId Transaction id
-     * @param  decision Decision
+     * @param decision      Decision
      */
     public ResponseMessage(UUID transactionId, boolean decision) {
         super(transactionId, decision);

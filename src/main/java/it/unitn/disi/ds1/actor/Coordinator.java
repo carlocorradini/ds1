@@ -87,7 +87,7 @@ public final class Coordinator extends Actor {
                 .match(ReadMessage.class, this::onReadMessage)
                 .match(ReadResultCoordinatorMessage.class, this::onReadResultCoordinatorMessage)
                 .match(WriteMessage.class, this::onWriteMessage)
-                .match(TxnEndMessage.class, this::onTxnEndMsg)
+                .match(TxnEndMessage.class, this::onTxnEndMessage)
                 .match(ResponseMessage.class, this::onResponseMessage)
                 .build();
     }
@@ -133,7 +133,7 @@ public final class Coordinator extends Actor {
     /**
      * Return true if all {@link DataStore} decided to commit, otherwise false.
      *
-     * @return booleam
+     * @return boolean
      */
     private boolean checkCommit() {
         for (Boolean decision : decisions) {
@@ -224,7 +224,7 @@ public final class Coordinator extends Actor {
      *
      * @param message Received message
      */
-    private void onTxnEndMsg(TxnEndMessage message) {
+    private void onTxnEndMessage(TxnEndMessage message) {
         LOGGER.debug("Coordinator {} received TxnEndMessage {}", id, message);
 
         final RequestMessage outMessage = new RequestMessage(message.transactionId, message.commit);

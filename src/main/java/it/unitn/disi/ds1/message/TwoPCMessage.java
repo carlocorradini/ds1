@@ -37,4 +37,9 @@ public abstract class TwoPCMessage extends TxnMessage implements Serializable {
         super(transactionId);
         this.decision = decision;
     }
+
+    @Override
+    public String toString() {
+        return GSON.toJson(this);
+    }
 }
