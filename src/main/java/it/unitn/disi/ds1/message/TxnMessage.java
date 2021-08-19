@@ -10,7 +10,7 @@ import java.util.UUID;
 /**
  * General abstract transaction message.
  */
-public abstract class TxnMsg implements Serializable {
+public abstract class TxnMessage implements Serializable {
     private static final long serialVersionUID = -794548318351688710L;
 
     /**
@@ -20,10 +20,23 @@ public abstract class TxnMsg implements Serializable {
             .excludeFieldsWithoutExposeAnnotation()
             .create();
 
+    /**
+     * Transaction id.
+     */
     @Expose
     public final UUID transactionId;
 
-    public TxnMsg(UUID transactionId) {
+    /**
+     * Construct a new TxnMessage class.
+     *
+     * @param transactionId Transaction id
+     */
+    public TxnMessage(UUID transactionId) {
         this.transactionId = transactionId;
+    }
+
+    @Override
+    public String toString() {
+        return GSON.toJson(this);
     }
 }

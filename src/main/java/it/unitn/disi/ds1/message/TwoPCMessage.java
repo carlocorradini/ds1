@@ -1,9 +1,9 @@
-package it.unitn.disi.ds1.message.twopc;
+package it.unitn.disi.ds1.message;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
-import it.unitn.disi.ds1.message.TxnMsg;
+import it.unitn.disi.ds1.message.TxnMessage;
 
 import java.io.Serializable;
 import java.util.UUID;
@@ -11,7 +11,7 @@ import java.util.UUID;
 /**
  * General abstract message for 2PC.
  */
-public abstract class TwoPCMessage extends TxnMsg implements Serializable {
+public abstract class TwoPCMessage extends TxnMessage implements Serializable {
     private static final long serialVersionUID = -7137752446196816824L;
 
     /**

@@ -2,7 +2,7 @@ package it.unitn.disi.ds1.message.txn;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import it.unitn.disi.ds1.message.TxnMsg;
+import it.unitn.disi.ds1.message.TxnMessage;
 
 import java.io.Serializable;
 import java.util.UUID;
@@ -11,7 +11,7 @@ import java.util.UUID;
  * Reply message to {@link TxnBeginMessage} informing that the transaction
  * has been correctly accepted.
  */
-public final class TxnAcceptMessage extends TxnMsg implements Serializable {
+public final class TxnAcceptMessage extends TxnMessage implements Serializable {
     private static final long serialVersionUID = -6339782978102970100L;
 
     /**

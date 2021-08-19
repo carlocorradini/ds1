@@ -3,7 +3,7 @@ package it.unitn.disi.ds1.message.ops.write;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
-import it.unitn.disi.ds1.message.TxnMsg;
+import it.unitn.disi.ds1.message.TxnMessage;
 
 import java.io.Serializable;
 import java.util.UUID;
@@ -12,7 +12,7 @@ import java.util.UUID;
  * Write request message
  * from {@link it.unitn.disi.ds1.actor.Client} to {@link it.unitn.disi.ds1.actor.Coordinator}.
  */
-public final class WriteMessage extends TxnMsg implements Serializable {
+public final class WriteMessage extends TxnMessage implements Serializable {
     private static final long serialVersionUID = 8248714506636891726L;
 
     /**

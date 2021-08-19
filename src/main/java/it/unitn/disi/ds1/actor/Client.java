@@ -8,9 +8,7 @@ import it.unitn.disi.ds1.message.*;
 import it.unitn.disi.ds1.message.ops.read.ReadMessage;
 import it.unitn.disi.ds1.message.ops.read.ReadResultMessage;
 import it.unitn.disi.ds1.message.ops.write.WriteMessage;
-import it.unitn.disi.ds1.message.txn.TxnAcceptMessage;
-import it.unitn.disi.ds1.message.txn.TxnAcceptTimeoutMessage;
-import it.unitn.disi.ds1.message.txn.TxnBeginMessage;
+import it.unitn.disi.ds1.message.txn.*;
 import it.unitn.disi.ds1.message.welcome.ClientWelcomeMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -206,7 +204,7 @@ public final class Client extends Actor {
      */
     private void endTxn() {
         final boolean commit = random.nextDouble() < COMMIT_PROBABILITY;
-        final TxnEndMsg outMessage = new TxnEndMsg(txnId.orElseThrow(NullPointerException::new), id, commit);
+        final TxnEndMessage outMessage = new TxnEndMessage(txnId.orElseThrow(NullPointerException::new), id, commit);
 
         txnCoordinator.tell(outMessage, getSelf());
         txnFirstValue = null;
@@ -348,7 +346,7 @@ public final class Client extends Actor {
         getContext().stop(getSelf());
     }
 
-    private void onTxnResultMsg(TxnResultMsg msg) {
+    private void onTxnResultMsg(TxnResultMessage msg) {
         if (msg.commit) {
             txnCommitted++;
             System.out.printf("%s COMMIT OK (%d/%d)%n", getSelf().path().name(), txnCommitted, txnAttempted);

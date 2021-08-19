@@ -2,7 +2,7 @@ package it.unitn.disi.ds1.message.twopc;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import it.unitn.disi.ds1.message.twopc.TwoPCMessage;
+import it.unitn.disi.ds1.message.TwoPCMessage;
 
 import java.io.Serializable;
 import java.util.UUID;

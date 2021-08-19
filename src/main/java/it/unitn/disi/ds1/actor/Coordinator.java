@@ -2,12 +2,15 @@ package it.unitn.disi.ds1.actor;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
+import it.unitn.disi.ds1.message.txn.TxnEndMessage;
+import it.unitn.disi.ds1.message.txn.TxnResultMessage;
 import it.unitn.disi.ds1.message.ops.read.ReadResultMessage;
 import it.unitn.disi.ds1.message.ops.read.ReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.ops.read.ReadMessage;
 import it.unitn.disi.ds1.message.ops.read.ReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.ops.write.WriteCoordinatorMessage;
 import it.unitn.disi.ds1.message.ops.write.WriteMessage;
+import it.unitn.disi.ds1.message.twopc.RequestMessage;
 import it.unitn.disi.ds1.message.txn.TxnAcceptMessage;
 import it.unitn.disi.ds1.message.txn.TxnBeginMessage;
 import it.unitn.disi.ds1.message.welcome.CoordinatorWelcomeMessage;
@@ -82,6 +85,7 @@ public final class Coordinator extends Actor {
                 .match(ReadMessage.class, this::onReadMessage)
                 .match(ReadResultCoordinatorMessage.class, this::onReadResultCoordinatorMessage)
                 .match(WriteMessage.class, this::onWriteMessage)
+                .match(TxnEndMessage.class,  this::onTxnEndMsg)
                 .build();
     }
 
@@ -199,6 +203,15 @@ public final class Coordinator extends Actor {
         LOGGER.debug("Coordinator {} send WriteCoordinatorMessage: {}", id, outMessage);
     }
 
+    private void onTxnEndMsg(TxnEndMessage msg) {
+        System.out.printf("Start 2PC from %s for transaction:%s with decision by %s:%s\n", getSelf().path().name(), msg.transactionId, getSender().path().name(), msg.commit);
+        this.dataStores.forEach(i -> i.tell(new RequestMessage(msg.transactionId, msg.commit), getSelf()));
+        if (!msg.commit) {
+            // Reply immediately to Abort client decision
+            getSender().tell(new TxnResultMessage(false), getSelf());
+        }
+    }
+
     /*-- Actor methods -------------------------------------------------------- */
     /*private boolean checkCommit() {
         for (Boolean decision : this.decisions) {
@@ -210,19 +223,7 @@ public final class Coordinator extends Actor {
     }*/
 
     /*-- Message handlers ----------------------------------------------------- */
-    /*private void onReadResultCoordMsg(ReadResultCoordMsg msg) {
-        this.transactions.get(msg.transactionId).tell(new ReadResultMsg(msg.transactionId, msg.key, msg.value), getSelf());
-    }
-
-    private void onTxnEndMsg(TxnEndMsg msg) {
-        System.out.printf("Start 2PC from %s for transaction:%s with decision by %s:%s\n", getSelf().path().name(), msg.transactionId, getSender().path().name(), msg.commit);
-        this.dataStores.forEach(i -> i.tell(new RequestMsg(msg.transactionId, msg.commit), getSelf()));
-        if (!msg.commit) {
-            // Reply immediately to Abort client decision
-            getSender().tell(new TxnResultMsg(false), getSelf());
-        }
-    }
-
+    /*
     private void onResponseMsg(ResponseMsg msg) {
         // Store Yes or No from servers
         this.decisions.add(msg.decision);
