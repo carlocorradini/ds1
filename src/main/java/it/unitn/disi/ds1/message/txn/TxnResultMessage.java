@@ -2,6 +2,7 @@ package it.unitn.disi.ds1.message.txn;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.annotations.Expose;
 
 import java.io.Serializable;
 
@@ -21,6 +22,7 @@ public final class TxnResultMessage implements Serializable {
     /**
      * Resulting decision.
      */
+    @Expose
     public final Boolean commit;
 
     /**

@@ -5,11 +5,11 @@
     </Properties>
     <Appenders>
         <Console name="console" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d [%highlight{%-5level}] %c - %msg%n"
+            <PatternLayout pattern="%d [%highlight{%-5level}] %c:%L - %msg%n"
                            disableAnsi="false"/>
         </Console>
         <File name="file" fileName="${appName}.log" append="false">
-            <PatternLayout pattern="%d [%-5level] %c - %msg%n"/>
+            <PatternLayout pattern="%d [%-5level] %c:%L - %msg%n"/>
         </File>
     </Appenders>
     <Loggers>

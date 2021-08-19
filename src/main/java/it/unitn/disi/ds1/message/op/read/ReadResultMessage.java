@@ -1,21 +1,18 @@
-package it.unitn.disi.ds1.message.ops.read;
+package it.unitn.disi.ds1.message.op.read;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
-import it.unitn.disi.ds1.message.TxnMessage;
-
-import java.util.UUID;
 
 import java.io.Serializable;
 
 /**
  * Reply message to {@link ReadCoordinatorMessage}
- * from {@link it.unitn.disi.ds1.actor.DataStore} to {@link it.unitn.disi.ds1.actor.Coordinator}
- * having the value of the corresponding key of the {@link it.unitn.disi.ds1.Item}.
+ * from {@link it.unitn.disi.ds1.actor.Coordinator} to {@link it.unitn.disi.ds1.actor.Client}
+ * having the value of the corresponding key of the {@link it.unitn.disi.ds1.Item}
  */
-public final class ReadResultCoordinatorMessage extends TxnMessage implements Serializable {
-    private static final long serialVersionUID = 2418188472950018347L;
+public final class ReadResultMessage implements Serializable {
+    private static final long serialVersionUID = 6073342617515584698L;
 
     /**
      * Gson instance.
@@ -31,20 +28,18 @@ public final class ReadResultCoordinatorMessage extends TxnMessage implements Se
     public final int key;
 
     /**
-     * {@link it.unitn.disi.ds1.Item} value.
+     * Item value.
      */
     @Expose
     public final int value;
 
     /**
-     * Construct a new ReadResultCoordinatorMessage class.
+     * Construct a new ReadResultMessage class.
      *
-     * @param transactionId Transaction id
      * @param key           Item key
      * @param value         Item value
      */
-    public ReadResultCoordinatorMessage(UUID transactionId, int key, int value) {
-        super(transactionId);
+    public ReadResultMessage(int key, int value) {
         this.key = key;
         this.value = value;
     }

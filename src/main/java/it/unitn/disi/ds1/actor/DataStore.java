@@ -2,11 +2,12 @@ package it.unitn.disi.ds1.actor;
 
 import akka.actor.Props;
 import it.unitn.disi.ds1.Item;
-import it.unitn.disi.ds1.message.ops.read.ReadCoordinatorMessage;
-import it.unitn.disi.ds1.message.ops.read.ReadResultCoordinatorMessage;
-import it.unitn.disi.ds1.message.ops.write.WriteCoordinatorMessage;
-import it.unitn.disi.ds1.message.twopc.RequestMessage;
-import it.unitn.disi.ds1.message.twopc.ResponseMessage;
+import it.unitn.disi.ds1.message.op.read.ReadCoordinatorMessage;
+import it.unitn.disi.ds1.message.op.read.ReadResultCoordinatorMessage;
+import it.unitn.disi.ds1.message.op.write.WriteCoordinatorMessage;
+import it.unitn.disi.ds1.message.pc.two.TwoPcDecisionMessage;
+import it.unitn.disi.ds1.message.pc.two.TwoPcRequestMessage;
+import it.unitn.disi.ds1.message.pc.two.TwoPcResponseMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -67,7 +68,8 @@ public final class DataStore extends Actor {
         return receiveBuilder()
                 .match(ReadCoordinatorMessage.class, this::onReadCoordinatorMessage)
                 .match(WriteCoordinatorMessage.class, this::onWriteCoordinatorMessage)
-                .match(RequestMessage.class, this::onRequestMessage)
+                .match(TwoPcRequestMessage.class, this::onRequestMessage)
+                .match(TwoPcDecisionMessage.class, this::onDecisionMessage)
                 .build();
     }
 
@@ -84,27 +86,28 @@ public final class DataStore extends Actor {
 
         if (item == null) {
             LOGGER.error("Unable to find Item by key {}", key);
-            // FIXME Try with something compatible with Akka
-            System.exit(1);
+            getContext().system().terminate();
         }
 
         return item;
     }
 
     /**
-     * Return true if DataStore is able to commit, otherwise false.
+     * Return true if is able to commit changes made by {@link UUID transaction}, otherwise false.
      *
      * @param transactionId Transaction id
-     * @return boolean
+     * @return True if it can commit, false otherwise
      */
-    private boolean checkVersion(UUID transactionId) {
-        Map<Integer, Item> workspace = workspaces.get(transactionId);
-        for (Map.Entry<Integer, Item> i : workspace.entrySet()) {
-            if (workspace.get(i.getKey()).version != itemByKey(i.getKey()).version) {
-                return false;
-            }
-        }
-        return true;
+    private boolean canCommit(UUID transactionId) {
+        // Obtain private workspace of the transaction
+        final Map<Integer, Item> workspace = workspaces.get(transactionId);
+
+        return workspace.entrySet().stream().allMatch((entry) -> {
+            final Item itemInWorkSpace = entry.getValue();
+            final Item itemInStorage = itemByKey(entry.getKey());
+
+            return itemInWorkSpace.version == itemInStorage.version + 1;
+        });
     }
 
     // --- Message handlers ---
@@ -148,52 +151,50 @@ public final class DataStore extends Actor {
         // Obtain private workspace, otherwise create
         final Map<Integer, Item> workspace = workspaces.computeIfAbsent(message.transactionId, k -> new HashMap<>());
         // Add new item to workspace
-        final Item oldItem = itemByKey(message.key);
-        final Item newItem = new Item(message.value, oldItem.version);
-        workspace.put(message.key, newItem);
+        final Item itemInStorage = itemByKey(message.key);
+        final Item newItemInWorkspace = new Item(message.value, itemInStorage.version + 1);
+        workspace.put(message.key, newItemInWorkspace);
 
-        LOGGER.info("DataStore {} write request workspace in transaction {}: {}", id, message.transactionId, newItem);
+        LOGGER.info("DataStore {} write request workspace in transaction {}: {}", id, message.transactionId, newItemInWorkspace);
     }
 
     /**
-     * Callback for {@link RequestMessage} message.
+     * Callback for {@link TwoPcRequestMessage} message.
      *
      * @param message Received message
      */
-    private void onRequestMessage(RequestMessage message) {
+    private void onRequestMessage(TwoPcRequestMessage message) {
         LOGGER.debug("DataStore {} received RequestMessage: {}", id, message);
 
         if (message.decision) {
-            final ResponseMessage outMessage = new ResponseMessage(message.transactionId, checkVersion(message.transactionId));
+            // Inform that it can commit
+            final TwoPcResponseMessage outMessage = new TwoPcResponseMessage(id, message.transactionId, canCommit(message.transactionId));
             getSender().tell(outMessage, getSender());
             LOGGER.debug("DataStore {} send ResponseMessage: {}", id, outMessage);
         } else {
-            storage.remove(message.transactionId);
-            LOGGER.debug("DataStore {} abort immediately", id);
+            // Delete workspace for the aborted transaction
+            workspaces.remove(message.transactionId);
+            LOGGER.debug("DataStore {} deleted workspace {} due to client abort", id, message.transactionId);
         }
     }
 
-    /*-- Actor methods -------------------------------------------------------- */
-    /*
-    private void applyChanges(UUID transactionId) {
-        for (WriteRequest i : this.workspace) {
-            if (i.transactionId.equals(transactionId)) {
-                this.storage.put(i.key, new Item(i.newValue, this.storage.get(i.key).version + 1));
-            }
+    /**
+     * Callback for {@link TwoPcDecisionMessage message}.
+     *
+     * @param message Received message
+     */
+    private void onDecisionMessage(TwoPcDecisionMessage message) {
+        LOGGER.debug("DataStore {} received DecisionMessage: {}", id, message);
+
+        if (message.decision) {
+            // Commit
+            storage.putAll(workspaces.get(message.transactionId));
+            LOGGER.info("DataStore {} successfully committed transaction {}", id, message.transactionId);
         }
+
+        // Clean workspace of the current transaction
+        workspaces.remove(message.transactionId);
+        LOGGER.trace("DataStore {} clean resources", id);
     }
 
-    /*-- Message handlers ----------------------------------------------------- */
-    /*
-
-
-    private void onDecisionMsg(DecisionMsg msg) {
-        if (msg.decision) {
-            // Apply changes if Commit
-            applyChanges(msg.transactionId);
-            System.out.printf("%s new values stored!\n%s\n", getSelf().path().name(), this.storage);
-        }
-        // Discard changes if Abort or Clear workspace
-        this.workspace.removeIf(i -> i.transactionId.equals(msg.transactionId));
-    }*/
 }

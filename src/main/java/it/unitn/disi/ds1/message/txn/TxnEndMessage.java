@@ -3,15 +3,13 @@ package it.unitn.disi.ds1.message.txn;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
-import it.unitn.disi.ds1.message.TxnMessage;
 
 import java.io.Serializable;
-import java.util.UUID;
 
 /**
  * Transaction end message.
  */
-public final class TxnEndMessage extends TxnMessage implements Serializable {
+public final class TxnEndMessage implements Serializable {
     private static final long serialVersionUID = -7119663856673239183L;
 
     /**
@@ -36,12 +34,10 @@ public final class TxnEndMessage extends TxnMessage implements Serializable {
     /**
      * Construct a new TxnEndMessage class.
      *
-     * @param transactionId Transaction id
      * @param clientId Client id
      * @param commit Commit or Abort decision
      */
-    public TxnEndMessage(UUID transactionId, int clientId, boolean commit) {
-        super(transactionId);
+    public TxnEndMessage(int clientId, boolean commit) {
         this.clientId = clientId;
         this.commit = commit;
     }

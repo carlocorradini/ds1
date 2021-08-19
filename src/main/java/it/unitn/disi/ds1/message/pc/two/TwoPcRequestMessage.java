@@ -1,18 +1,17 @@
-package it.unitn.disi.ds1.message.twopc;
+package it.unitn.disi.ds1.message.pc.two;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import it.unitn.disi.ds1.message.TwoPCMessage;
 
 import java.io.Serializable;
 import java.util.UUID;
 
 /**
- * Reply from {@link it.unitn.disi.ds1.actor.DataStore} to {@link it.unitn.disi.ds1.actor.Coordinator}
- * with Yes or No decision for committing
+ * Message from {@link it.unitn.disi.ds1.actor.Coordinator} to {@link it.unitn.disi.ds1.actor.DataStore}
+ * asking if {@link it.unitn.disi.ds1.actor.DataStore} is able to commit or not
  */
-public final class ResponseMessage extends TwoPCMessage implements Serializable {
-    private static final long serialVersionUID = 4917833122149828262L;
+public final class TwoPcRequestMessage extends TwoPcMessage implements Serializable {
+    private static final long serialVersionUID = 6797846417399441318L;
 
     /**
      * Gson instance.
@@ -22,12 +21,12 @@ public final class ResponseMessage extends TwoPCMessage implements Serializable 
             .create();
 
     /**
-     * Construct a new ResponseMessage class.
+     * Construct a new RequestMessage class.
      *
      * @param transactionId Transaction id
      * @param decision      Decision
      */
-    public ResponseMessage(UUID transactionId, boolean decision) {
+    public TwoPcRequestMessage(UUID transactionId, boolean decision) {
         super(transactionId, decision);
     }
 

@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.Random;
 
 /**
  * General abstract actor.
@@ -17,9 +18,9 @@ public abstract class Actor extends AbstractActor {
     private static final Logger LOGGER = LogManager.getLogger(Client.class);
 
     /**
-     * Secure random instance.
+     * {@link Random} instance.
      */
-    protected final SecureRandom random;
+    protected final Random random;
 
     /**
      * Actor identifier.
@@ -34,16 +35,14 @@ public abstract class Actor extends AbstractActor {
     public Actor(int id) {
         this.id = id;
 
-        // Initialize secure random
-        SecureRandom sr = null;
+        // Initialize random with SecureRandom
+        Random r;
         try {
-            sr = SecureRandom.getInstanceStrong();
+            r = SecureRandom.getInstanceStrong();
         } catch (NoSuchAlgorithmException e) {
-            LOGGER.error("Secure Random Number Generator (RNG) not found: {}", e.getMessage());
-            e.printStackTrace();
-            // FIXME Try with something compatible with Akka
-            System.exit(1);
+            LOGGER.warn("Secure Random Number Generator (RNG) not found: {}. Fallback to standard Random", e.getMessage());
+            r = new Random();
         }
-        this.random = sr;
+        this.random = r;
     }
 }

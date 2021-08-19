@@ -1,9 +1,9 @@
-package it.unitn.disi.ds1.message.ops.write;
+package it.unitn.disi.ds1.message.op.write;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
-import it.unitn.disi.ds1.message.TxnMessage;
+import it.unitn.disi.ds1.message.txn.TxnMessage;
 
 import java.util.UUID;
 

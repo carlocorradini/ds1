@@ -1,19 +1,20 @@
-package it.unitn.disi.ds1.message.ops.read;
+package it.unitn.disi.ds1.message.op.read;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
-import it.unitn.disi.ds1.message.TxnMessage;
+import it.unitn.disi.ds1.message.txn.TxnMessage;
+
+import java.util.UUID;
 
 import java.io.Serializable;
-import java.util.UUID;
 
 /**
  * Read request message
- * from {@link it.unitn.disi.ds1.actor.Client} to {@link it.unitn.disi.ds1.actor.Coordinator}.
+ * from {@link it.unitn.disi.ds1.actor.Coordinator} to {@link it.unitn.disi.ds1.actor.DataStore}.
  */
-public final class ReadMessage extends TxnMessage implements Serializable {
-    private static final long serialVersionUID = 278859909154339067L;
+public final class ReadCoordinatorMessage extends TxnMessage implements Serializable {
+    private static final long serialVersionUID = 4166460770428474735L;
 
     /**
      * Gson instance.
@@ -23,27 +24,19 @@ public final class ReadMessage extends TxnMessage implements Serializable {
             .create();
 
     /**
-     * {@link it.unitn.disi.ds1.actor.Client} id.
-     */
-    @Expose
-    public final int clientId;
-
-    /**
      * {@link it.unitn.disi.ds1.Item} key to read.
      */
     @Expose
     public final int key;
 
     /**
-     * Construct a new ReadMessage class.
+     * Construct a new ReadCoordinatorMessage class.
      *
      * @param transactionId Transaction id
-     * @param clientId      Client id
      * @param key           Item key to read
      */
-    public ReadMessage(UUID transactionId, int clientId, int key) {
+    public ReadCoordinatorMessage(UUID transactionId, int key) {
         super(transactionId);
-        this.clientId = clientId;
         this.key = key;
     }
 

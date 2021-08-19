@@ -2,17 +2,18 @@ package it.unitn.disi.ds1.actor;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
-import it.unitn.disi.ds1.message.twopc.DecisionMessage;
-import it.unitn.disi.ds1.message.twopc.ResponseMessage;
+import akka.japi.Pair;
+import it.unitn.disi.ds1.message.pc.two.TwoPcDecisionMessage;
+import it.unitn.disi.ds1.message.pc.two.TwoPcResponseMessage;
 import it.unitn.disi.ds1.message.txn.TxnEndMessage;
 import it.unitn.disi.ds1.message.txn.TxnResultMessage;
-import it.unitn.disi.ds1.message.ops.read.ReadResultMessage;
-import it.unitn.disi.ds1.message.ops.read.ReadCoordinatorMessage;
-import it.unitn.disi.ds1.message.ops.read.ReadMessage;
-import it.unitn.disi.ds1.message.ops.read.ReadResultCoordinatorMessage;
-import it.unitn.disi.ds1.message.ops.write.WriteCoordinatorMessage;
-import it.unitn.disi.ds1.message.ops.write.WriteMessage;
-import it.unitn.disi.ds1.message.twopc.RequestMessage;
+import it.unitn.disi.ds1.message.op.read.ReadResultMessage;
+import it.unitn.disi.ds1.message.op.read.ReadCoordinatorMessage;
+import it.unitn.disi.ds1.message.op.read.ReadMessage;
+import it.unitn.disi.ds1.message.op.read.ReadResultCoordinatorMessage;
+import it.unitn.disi.ds1.message.op.write.WriteCoordinatorMessage;
+import it.unitn.disi.ds1.message.op.write.WriteMessage;
+import it.unitn.disi.ds1.message.pc.two.TwoPcRequestMessage;
 import it.unitn.disi.ds1.message.txn.TxnAcceptMessage;
 import it.unitn.disi.ds1.message.txn.TxnBeginMessage;
 import it.unitn.disi.ds1.message.welcome.CoordinatorWelcomeMessage;
@@ -25,17 +26,6 @@ import java.util.*;
  * Coordinator {@link Actor actor} class.
  */
 public final class Coordinator extends Actor {
-    // TODO Let's see
-    private static class TxnMapping {
-        public final int clientId;
-        public final ActorRef actorRef;
-
-        public TxnMapping(int clientId, ActorRef actorRef) {
-            this.clientId = clientId;
-            this.actorRef = actorRef;
-        }
-    }
-
     /**
      * Logger.
      */
@@ -47,11 +37,20 @@ public final class Coordinator extends Actor {
     private final List<ActorRef> dataStores;
 
     /**
-     * Mapping between {@link UUID transactionId} and {@link TxnMapping}.
+     * Mapping from {@link UUID transaction Id} to {@link ActorRef client ref}.
      */
-    private final HashMap<UUID, TxnMapping> transactions;
+    private final Map<UUID, ActorRef> transactionIdToClientRef;
 
-    private final List<Boolean> decisions;
+    /**
+     * Mapping from {@link Integer client id} to {@link UUID transaction id}.
+     */
+    private final Map<Integer, UUID> clientIdToTransactionId;
+
+    // TODO
+    private final Map<UUID, Set<Integer>> dataStoresAffectedInTransaction;
+
+    // TODO
+    private final Map<UUID, List<Pair<Integer, Boolean>>> TransactionDecisions;
 
     // --- Constructors ---
 
@@ -63,8 +62,10 @@ public final class Coordinator extends Actor {
     public Coordinator(int id) {
         super(id);
         this.dataStores = new ArrayList<>();
-        this.transactions = new HashMap<>();
-        this.decisions = new ArrayList<>();
+        this.transactionIdToClientRef = new HashMap<>();
+        this.clientIdToTransactionId = new HashMap<>();
+        this.dataStoresAffectedInTransaction = new HashMap<>();
+        this.TransactionDecisions = new HashMap<>();
 
         LOGGER.debug("Coordinator {} initialized", id);
     }
@@ -88,60 +89,47 @@ public final class Coordinator extends Actor {
                 .match(ReadResultCoordinatorMessage.class, this::onReadResultCoordinatorMessage)
                 .match(WriteMessage.class, this::onWriteMessage)
                 .match(TxnEndMessage.class, this::onTxnEndMessage)
-                .match(ResponseMessage.class, this::onResponseMessage)
+                .match(TwoPcResponseMessage.class, this::onResponseMessage)
                 .build();
     }
 
     // --- Methods ---
 
     /**
+     * Return {@link DataStore} id by {@link it.unitn.disi.ds1.Item} key.
+     *
+     * @param key Item key
+     * @return DataStore id
+     */
+    private int dataStoreIdByItemKey(int key) {
+        return key / 10;
+    }
+
+    /**
      * Return {@link DataStore} {@link ActorRef} by {@link it.unitn.disi.ds1.Item} key.
      *
-     * @param key Item key.
+     * @param key Item key
      * @return DataStore actorRef
      */
-    private ActorRef dataStoreByItemKey(int key) {
-        final ActorRef dataStore = dataStores.get(key / 10);
+    private ActorRef dataStoreRefByItemKey(int key) {
+        final ActorRef dataStore = dataStores.get(dataStoreIdByItemKey(key));
 
         if (dataStore == null) {
-            LOGGER.error("Unable to find Data Store by Item key {}", key);
-            // FIXME Try with something compatible with Akka
-            System.exit(1);
+            LOGGER.error("Coordinator {} is unable to find Data Store by Item key {}", id, key);
+            getContext().system().terminate();
         }
 
         return dataStore;
     }
 
     /**
-     * Return {@link TxnMapping} by {@link UUID transaction id}.
+     * Return true if all {@link DataStore} have decided to commit, otherwise false.
      *
-     * @param transactionId Transaction id
-     * @return TxnMapping
+     * @param decisions List of DataStores decisions
+     * @return True can commit, otherwise not
      */
-    private TxnMapping txnMappingByTransactionId(UUID transactionId) {
-        final TxnMapping txnMapping = transactions.get(transactionId);
-
-        if (txnMapping == null) {
-            LOGGER.error("Unable to find TxnMapping by transactionId {}", transactionId);
-            // FIXME Try with something compatible with Akka
-            System.exit(1);
-        }
-
-        return txnMapping;
-    }
-
-    /**
-     * Return true if all {@link DataStore} decided to commit, otherwise false.
-     *
-     * @return boolean
-     */
-    private boolean checkCommit() {
-        for (Boolean decision : decisions) {
-            if (!decision) {
-                return false;
-            }
-        }
-        return true;
+    private boolean canCommit(List<Pair<Integer, Boolean>> decisions) {
+        return decisions.stream().allMatch(Pair::second);
     }
 
     // --- Message handlers --
@@ -167,8 +155,10 @@ public final class Coordinator extends Actor {
         LOGGER.debug("Coordinator {} received TxnBeginMessage: {}", id, message);
 
         final UUID transactionId = UUID.randomUUID();
-        final TxnAcceptMessage outMessage = new TxnAcceptMessage(transactionId);
-        this.transactions.put(transactionId, new TxnMapping(message.clientId, getSender()));
+        final TxnAcceptMessage outMessage = new TxnAcceptMessage();
+        clientIdToTransactionId.put(message.clientId, transactionId);
+        transactionIdToClientRef.put(transactionId, getSender());
+
         getSender().tell(outMessage, getSelf());
 
         LOGGER.debug("Coordinator {} send TxnAcceptMessage: {}", id, outMessage);
@@ -182,8 +172,9 @@ public final class Coordinator extends Actor {
     private void onReadMessage(ReadMessage message) {
         LOGGER.debug("Coordinator {} received ReadMessage: {}", id, message);
 
-        final ActorRef dataStore = dataStoreByItemKey(message.key);
-        final ReadCoordinatorMessage outMessage = new ReadCoordinatorMessage(message.transactionId, message.key);
+        final UUID transactionId = clientIdToTransactionId.get(message.clientId);
+        final ActorRef dataStore = dataStoreRefByItemKey(message.key);
+        final ReadCoordinatorMessage outMessage = new ReadCoordinatorMessage(transactionId, message.key);
         dataStore.tell(outMessage, getSelf());
 
         LOGGER.debug("Coordinator {} send ReadCoordinatorMessage: {}", id, outMessage);
@@ -197,9 +188,9 @@ public final class Coordinator extends Actor {
     private void onReadResultCoordinatorMessage(ReadResultCoordinatorMessage message) {
         LOGGER.debug("Coordinator {} received ReadResultCoordinatorMessage: {}", id, message);
 
-        final TxnMapping txnMapping = txnMappingByTransactionId(message.transactionId);
-        final ReadResultMessage outMessage = new ReadResultMessage(message.transactionId, message.key, message.value);
-        txnMapping.actorRef.tell(outMessage, getSelf());
+        final ActorRef clientRef = transactionIdToClientRef.get(message.transactionId);
+        final ReadResultMessage outMessage = new ReadResultMessage(message.key, message.value);
+        clientRef.tell(outMessage, getSelf());
 
         LOGGER.debug("Coordinator {} send ReadResultMessage: {}", id, outMessage);
     }
@@ -212,9 +203,17 @@ public final class Coordinator extends Actor {
     private void onWriteMessage(WriteMessage message) {
         LOGGER.debug("Coordinator {} received WriteMessage: {}", id, message);
 
-        final ActorRef dataStore = dataStoreByItemKey(message.key);
-        final WriteCoordinatorMessage outMessage = new WriteCoordinatorMessage(message.transactionId, message.key, message.value);
+        // Forward write request to DataStore
+        final UUID transactionId = clientIdToTransactionId.get(message.clientId);
+        final ActorRef dataStore = dataStoreRefByItemKey(message.key);
+        final WriteCoordinatorMessage outMessage = new WriteCoordinatorMessage(transactionId, message.key, message.value);
         dataStore.tell(outMessage, getSelf());
+
+        // Add Data Store affected in transaction
+        final Set<Integer> itemsAffected = dataStoresAffectedInTransaction.computeIfAbsent(transactionId, k -> new HashSet<>());
+        final int dataStoreId = dataStoreIdByItemKey(message.key);
+        itemsAffected.add(dataStoreId);
+        LOGGER.trace("Coordinator {} add DataStore {} to the affected DataStore(s) in transaction {}", id, dataStoreId, transactionId);
 
         LOGGER.debug("Coordinator {} send WriteCoordinatorMessage: {}", id, outMessage);
     }
@@ -227,10 +226,15 @@ public final class Coordinator extends Actor {
     private void onTxnEndMessage(TxnEndMessage message) {
         LOGGER.debug("Coordinator {} received TxnEndMessage {}", id, message);
 
-        final RequestMessage outMessage = new RequestMessage(message.transactionId, message.commit);
-        dataStores.forEach(i -> i.tell(outMessage, getSelf()));
+        final UUID transactionId = clientIdToTransactionId.get(message.clientId);
+        final TwoPcRequestMessage outMessage = new TwoPcRequestMessage(transactionId, message.commit);
 
-        LOGGER.debug("Coordinator {} send RequestMessage {}", id, outMessage);
+        // FIXME Cambiare id di accesso Data Store ???
+        final Set<ActorRef> dataStoresToContact = new HashSet<>();
+        dataStoresAffectedInTransaction.get(transactionId).forEach(dataStoreId -> dataStoresToContact.add(dataStores.get(dataStoreId)));
+        dataStoresToContact.forEach(i -> i.tell(outMessage, getSelf()));
+
+        LOGGER.debug("Coordinator {} send RequestMessage: {}", id, outMessage);
 
         if (!message.commit) {
             // Reply immediately to Abort client decision
@@ -241,31 +245,49 @@ public final class Coordinator extends Actor {
     }
 
     /**
-     * Callback for {@link ResponseMessage} message.
+     * Callback for {@link TwoPcResponseMessage} message.
      *
      * @param message Received message
      */
-    private void onResponseMessage(ResponseMessage message) {
+    private void onResponseMessage(TwoPcResponseMessage message) {
         LOGGER.debug("Coordinator {} received ResponseMessage {}", id, message);
 
-        decisions.add(message.decision);
-        if (decisions.size() == dataStores.size()) {
+        // Obtain or create the list of DataStores decision
+        final List<Pair<Integer, Boolean>> decisions = TransactionDecisions.computeIfAbsent(message.transactionId, k -> new ArrayList<>());
+        // Add decision of the DataStore
+        decisions.add(Pair.create(message.dataStoreId, message.decision));
 
-            final boolean decision = checkCommit();
-            LOGGER.info("Coordinator {} decided to commit/abort: {}", id, decision);
+        // Data stores affected in current transaction
+        final Set<ActorRef> dataStoresToContact = new HashSet<>();
+        dataStoresAffectedInTransaction.get(message.transactionId).forEach(dataStoreId -> dataStoresToContact.add(dataStores.get(dataStoreId)));
+        ;
 
-            final DecisionMessage outMessage = new DecisionMessage(message.transactionId, decision);
-            dataStores.forEach(i -> i.tell(outMessage, getSender()));
-            LOGGER.debug("Coordinator {} send to DataStores DecisionMessage {}", id, outMessage);
+        // Check if the number of decisions has reached all the DataStores
+        if (decisions.size() == dataStoresToContact.size()) {
+            final boolean canCommit = canCommit(decisions);
 
-            final TxnResultMessage resultMessage = new TxnResultMessage(decision);
-            transactions.get(message.transactionId).actorRef.tell(resultMessage, getSender());
-            LOGGER.debug("Coordinator {} send to Client TxnResultMessage {}", id, resultMessage);
+            if (canCommit) {
+                LOGGER.info("Coordinator {} decided to commit: {}", id, decisions);
+            } else {
+                LOGGER.info("Coordinator {} decided to abort: {}", id, decisions);
+            }
 
-            decisions.clear();
-            transactions.remove(message.transactionId);
+            // Communicate commit decision to DataStores
+            final TwoPcDecisionMessage outMessageToDataStore = new TwoPcDecisionMessage(message.transactionId, canCommit);
+            dataStoresToContact.forEach(dataStore -> dataStore.tell(outMessageToDataStore, getSender()));
+            LOGGER.debug("Coordinator {} send to DataStores DecisionMessage: {}", id, outMessageToDataStore);
+
+            // Communicate commit decision to Client
+            final TxnResultMessage outMessageToClient = new TxnResultMessage(canCommit);
+            transactionIdToClientRef.get(message.transactionId).tell(outMessageToClient, getSender());
+            LOGGER.debug("Coordinator {} send to Client TxnResultMessage: {}", id, outMessageToClient);
+
+            // Clean
+            transactionIdToClientRef.remove(message.transactionId);
+            clientIdToTransactionId.values().remove(message.transactionId);
+            dataStoresAffectedInTransaction.remove(message.transactionId);
+            TransactionDecisions.remove(message.transactionId);
+            LOGGER.trace("Coordinator {} clean resources", id);
         }
-
     }
-
 }

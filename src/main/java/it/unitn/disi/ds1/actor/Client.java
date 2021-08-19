@@ -5,9 +5,9 @@ import java.util.concurrent.TimeUnit;
 
 import akka.actor.*;
 import it.unitn.disi.ds1.message.*;
-import it.unitn.disi.ds1.message.ops.read.ReadMessage;
-import it.unitn.disi.ds1.message.ops.read.ReadResultMessage;
-import it.unitn.disi.ds1.message.ops.write.WriteMessage;
+import it.unitn.disi.ds1.message.op.read.ReadMessage;
+import it.unitn.disi.ds1.message.op.read.ReadResultMessage;
+import it.unitn.disi.ds1.message.op.write.WriteMessage;
 import it.unitn.disi.ds1.message.txn.*;
 import it.unitn.disi.ds1.message.welcome.ClientWelcomeMessage;
 import org.apache.logging.log4j.LogManager;
@@ -36,12 +36,12 @@ public final class Client extends Actor {
     /**
      * Minimum transactions.
      */
-    private static final int MIN_TXN_LENGTH = 20;
+    private static final int MIN_TXN_LENGTH = 2;
 
     /**
      * Maximum transactions.
      */
-    private static final int MAX_TXN_LENGTH = 40;
+    private static final int MAX_TXN_LENGTH = 5;
 
     /**
      * Random range.
@@ -89,7 +89,6 @@ public final class Client extends Actor {
      */
     private int txnSecondKey;
 
-    // FIXME I don't like Integer
     /**
      * First {@link it.unitn.disi.ds1.Item} value of the transaction.
      */
@@ -115,12 +114,6 @@ public final class Client extends Actor {
      */
     private Cancellable txnAcceptTimeout;
 
-    // FIXME Bleach
-    /**
-     * Transaction identifier.
-     */
-    private Optional<UUID> txnId;
-
     // --- Constructors ---
 
     /**
@@ -133,7 +126,6 @@ public final class Client extends Actor {
         this.coordinators = new ArrayList<>();
         this.txnAttempted = 0;
         this.txnCommitted = 0;
-        this.txnId = Optional.empty();
         LOGGER.debug("Client {} initialized", id);
     }
 
@@ -170,8 +162,7 @@ public final class Client extends Actor {
         } catch (InterruptedException e) {
             LOGGER.error("{}", e.getMessage());
             e.printStackTrace();
-            // FIXME Try with something compatible with Akka
-            System.exit(1);
+            getContext().system().terminate();
         }
 
         txnAccepted = false;
@@ -205,12 +196,11 @@ public final class Client extends Actor {
      */
     private void endTxn() {
         final boolean commit = random.nextDouble() < COMMIT_PROBABILITY;
-        final TxnEndMessage outMessage = new TxnEndMessage(txnId.orElseThrow(NullPointerException::new), id, commit);
+        final TxnEndMessage outMessage = new TxnEndMessage(id, commit);
 
         txnCoordinator.tell(outMessage, getSelf());
         txnFirstValue = null;
         txnSecondValue = null;
-        txnId = Optional.empty();
 
         LOGGER.debug("Client {} send TxnEndMessage: {}", id, outMessage);
         LOGGER.info("Client {} END transaction", id);
@@ -226,12 +216,12 @@ public final class Client extends Actor {
         txnSecondKey = (txnFirstKey + randKeyOffset) % (maxItemKey + 1);
 
         // Read request 1
-        final ReadMessage outFirstMessage = new ReadMessage(txnId.orElseThrow(NullPointerException::new), id, txnFirstKey);
+        final ReadMessage outFirstMessage = new ReadMessage(id, txnFirstKey);
         txnCoordinator.tell(outFirstMessage, getSelf());
         LOGGER.debug("Client {} send ReadMessage: {}", id, outFirstMessage);
 
         // Read request 2
-        final ReadMessage outSecondMessage = new ReadMessage(txnId.orElseThrow(NullPointerException::new), id, txnSecondKey);
+        final ReadMessage outSecondMessage = new ReadMessage(id, txnSecondKey);
         txnCoordinator.tell(outSecondMessage, getSelf());
         LOGGER.debug("Client {} send ReadMessage: {}", id, outSecondMessage);
 
@@ -254,12 +244,12 @@ public final class Client extends Actor {
         final int newSecondValue = txnSecondValue + amount;
 
         // Write request 1
-        final WriteMessage outFirstMessage = new WriteMessage(txnId.orElseThrow(NullPointerException::new), id, txnFirstKey, newFirstValue);
+        final WriteMessage outFirstMessage = new WriteMessage(id, txnFirstKey, newFirstValue);
         txnCoordinator.tell(outFirstMessage, getSelf());
         LOGGER.debug("Client {} send WriteMessage: {}", id, outFirstMessage);
 
         // Write request 2
-        final WriteMessage outSecondMessage = new WriteMessage(txnId.orElseThrow(NullPointerException::new), id, txnSecondKey, newSecondValue);
+        final WriteMessage outSecondMessage = new WriteMessage(id, txnSecondKey, newSecondValue);
         txnCoordinator.tell(outSecondMessage, getSelf());
         LOGGER.debug("Client {} send WriteMessage: {}", id, outSecondMessage);
 
@@ -294,7 +284,6 @@ public final class Client extends Actor {
     private void onTxnAcceptMessage(TxnAcceptMessage message) {
         LOGGER.debug("Client {} received TxnAcceptMessage: {}", id, message);
 
-        txnId = Optional.of(message.transactionId);
         txnAccepted = true;
         txnAcceptTimeout.cancel();
 
@@ -348,7 +337,7 @@ public final class Client extends Actor {
      * @param message Received message
      */
     private void onTxnResultMsg(TxnResultMessage message) {
-        LOGGER.debug("Client {} received TxnResultMessage with decision commit/abort: {}", id, message.commit);
+        LOGGER.debug("Client {} received TxnResultMessage with decision commit/abort {}: {}", id, message.commit, message);
 
         if (message.commit) {
             txnCommitted++;

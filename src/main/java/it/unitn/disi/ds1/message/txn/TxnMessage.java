@@ -1,4 +1,4 @@
-package it.unitn.disi.ds1.message;
+package it.unitn.disi.ds1.message.txn;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
