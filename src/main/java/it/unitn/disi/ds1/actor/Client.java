@@ -154,6 +154,7 @@ public final class Client extends Actor {
                 .match(TxnAcceptMessage.class, this::onTxnAcceptMessage)
                 .match(TxnAcceptTimeoutMessage.class, this::onTxnAcceptTimeoutMessage)
                 .match(ReadResultMessage.class, this::onReadResultMessage)
+                .match(TxnResultMessage.class,  this::onTxnResultMsg)
                 .build();
     }
 
@@ -341,22 +342,31 @@ public final class Client extends Actor {
         }
     }
 
+    /**
+     * Callback for {@link TxnResultMessage} message.
+     *
+     * @param message Received message
+     */
+    private void onTxnResultMsg(TxnResultMessage message) {
+        LOGGER.debug("Client {} received TxnResultMessage with decision commit/abort: {}", id, message.commit);
+
+        if (message.commit) {
+            txnCommitted++;
+            LOGGER.info("Client {} TXNs COMMIT OK ({}/{})", id, txnCommitted, txnAttempted);
+            System.out.printf("%s COMMIT OK (%d/%d)%n", getSelf().path().name(), txnCommitted, txnAttempted);
+        } else {
+            int txnFailed = txnAttempted - txnCommitted;
+            LOGGER.info("Client {} TXNs COMMIT FAIL ({}/{})", id, txnFailed, txnAttempted);
+        }
+
+        LOGGER.info("End TXN by Client {}", id);
+
+        //beginTxn();
+    }
+
     /*-- Message handlers ----------------------------------------------------- */
     private void onStopMsg(StopMsg msg) {
         getContext().stop(getSelf());
     }
 
-    private void onTxnResultMsg(TxnResultMessage msg) {
-        if (msg.commit) {
-            txnCommitted++;
-            System.out.printf("%s COMMIT OK (%d/%d)%n", getSelf().path().name(), txnCommitted, txnAttempted);
-        } else {
-            System.out.printf("%s COMMIT FAIL (%d/%d)%n", getSelf().path().name(), txnAttempted - txnCommitted, txnAttempted);
-        }
-
-        System.out.printf("End TXN by %s\n", getSelf().path().name());
-        ;
-
-        //beginTxn();
-    }
 }

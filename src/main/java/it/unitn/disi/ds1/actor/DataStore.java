@@ -5,6 +5,8 @@ import it.unitn.disi.ds1.Item;
 import it.unitn.disi.ds1.message.ops.read.ReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.ops.read.ReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.ops.write.WriteCoordinatorMessage;
+import it.unitn.disi.ds1.message.twopc.RequestMessage;
+import it.unitn.disi.ds1.message.twopc.ResponseMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -65,8 +67,7 @@ public final class DataStore extends Actor {
         return receiveBuilder()
                 .match(ReadCoordinatorMessage.class, this::onReadCoordinatorMessage)
                 .match(WriteCoordinatorMessage.class, this::onWriteCoordinatorMessage)
-                /*.match(RequestMsg.class, this::onRequestMsg)
-                .match(DecisionMsg.class, this::onDecisionMsg)*/
+                .match(RequestMessage.class, this::onRequestMessage)
                 .build();
     }
 
@@ -88,6 +89,22 @@ public final class DataStore extends Actor {
         }
 
         return item;
+    }
+
+    /**
+     * Return true if DataStore is able to commit, otherwise false.
+     *
+     * @param transactionId Transaction id
+     * @return boolean
+     */
+    private boolean checkVersion(UUID transactionId) {
+        Map<Integer, Item> workspace = workspaces.get(transactionId);
+        for (Map.Entry<Integer, Item> i : workspace.entrySet()) {
+            if (workspace.get(i.getKey()).version != itemByKey(i.getKey()).version) {
+                return false;
+            }
+        }
+        return true;
     }
 
     // --- Message handlers ---
@@ -138,16 +155,26 @@ public final class DataStore extends Actor {
         LOGGER.info("DataStore {} write request workspace in transaction {}: {}", id, message.transactionId, newItem);
     }
 
-    /*-- Actor methods -------------------------------------------------------- */
-    /*private boolean checkVersion(UUID transactionId) {
-        for (WriteRequest i : this.workspace) {
-            if (i.transactionId.equals(transactionId) && i.actualVersion != this.storage.get(i.key).version) {
-                return false;
-            }
+    /**
+     * Callback for {@link RequestMessage} message.
+     *
+     * @param message Received message
+     */
+    private void onRequestMessage(RequestMessage message) {
+        LOGGER.debug("DataStore {} received RequestMessage: {}", id, message);
+
+        if (message.decision) {
+            final ResponseMessage outMessage = new ResponseMessage(message.transactionId, checkVersion(message.transactionId));
+            getSender().tell(outMessage, getSender());
+            LOGGER.debug("DataStore {} send ResponseMessage: {}", id, outMessage);
+        } else {
+            storage.remove(message.transactionId);
+            LOGGER.debug("DataStore {} abort immediately", id);
         }
-        return true;
     }
 
+    /*-- Actor methods -------------------------------------------------------- */
+    /*
     private void applyChanges(UUID transactionId) {
         for (WriteRequest i : this.workspace) {
             if (i.transactionId.equals(transactionId)) {
@@ -158,17 +185,7 @@ public final class DataStore extends Actor {
 
     /*-- Message handlers ----------------------------------------------------- */
     /*
-    private void onRequestMsg(RequestMsg msg) {
-        if (msg.decision) {
-            // Return to coordinator Yes or No
-            System.out.printf("%s --> Reply to coordinator:%s\n", getSelf().path().name(), checkVersion(msg.transactionId));
-            getSender().tell(new ResponseMsg(msg.transactionId, checkVersion(msg.transactionId)), getSender());
-        } else {
-            // Abort immediately
-            System.out.printf("%s --> Client decides to ABORT immediately\n", getSelf().path().name());
-            this.workspace.removeIf(i -> i.transactionId.equals(msg.transactionId));
-        }
-    }
+
 
     private void onDecisionMsg(DecisionMsg msg) {
         if (msg.decision) {

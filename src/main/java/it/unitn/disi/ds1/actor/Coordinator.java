@@ -2,6 +2,8 @@ package it.unitn.disi.ds1.actor;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
+import it.unitn.disi.ds1.message.twopc.DecisionMessage;
+import it.unitn.disi.ds1.message.twopc.ResponseMessage;
 import it.unitn.disi.ds1.message.txn.TxnEndMessage;
 import it.unitn.disi.ds1.message.txn.TxnResultMessage;
 import it.unitn.disi.ds1.message.ops.read.ReadResultMessage;
@@ -85,7 +87,8 @@ public final class Coordinator extends Actor {
                 .match(ReadMessage.class, this::onReadMessage)
                 .match(ReadResultCoordinatorMessage.class, this::onReadResultCoordinatorMessage)
                 .match(WriteMessage.class, this::onWriteMessage)
-                .match(TxnEndMessage.class,  this::onTxnEndMsg)
+                .match(TxnEndMessage.class, this::onTxnEndMsg)
+                .match(ResponseMessage.class, this::onResponseMessage)
                 .build();
     }
 
@@ -127,6 +130,20 @@ public final class Coordinator extends Actor {
         return txnMapping;
     }
 
+    /**
+     * Return true if all {@link DataStore} decided to commit, otherwise false.
+     *
+     * @return booleam
+     */
+    private boolean checkCommit() {
+        for (Boolean decision : decisions) {
+            if (!decision) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     // --- Message handlers --
 
     /**
@@ -137,7 +154,6 @@ public final class Coordinator extends Actor {
     private void onCoordinatorWelcomeMessage(CoordinatorWelcomeMessage message) {
         LOGGER.debug("Coordinator {} received CoordinatorWelcomeMessage: {}", id, message);
 
-        // Data Stores
         dataStores.clear();
         dataStores.addAll(message.dataStores);
     }
@@ -203,38 +219,53 @@ public final class Coordinator extends Actor {
         LOGGER.debug("Coordinator {} send WriteCoordinatorMessage: {}", id, outMessage);
     }
 
-    private void onTxnEndMsg(TxnEndMessage msg) {
-        System.out.printf("Start 2PC from %s for transaction:%s with decision by %s:%s\n", getSelf().path().name(), msg.transactionId, getSender().path().name(), msg.commit);
-        this.dataStores.forEach(i -> i.tell(new RequestMessage(msg.transactionId, msg.commit), getSelf()));
-        if (!msg.commit) {
+    /**
+     * Callback for {@link TxnEndMessage} message.
+     *
+     * @param message Received message
+     */
+    private void onTxnEndMsg(TxnEndMessage message) {
+        LOGGER.debug("Coordinator {} received TxnEndMessage {}", id, message);
+
+        final RequestMessage outMessage = new RequestMessage(message.transactionId, message.commit);
+        dataStores.forEach(i -> i.tell(outMessage, getSelf()));
+
+        LOGGER.debug("Coordinator {} send RequestMessage {}", id, outMessage);
+
+        if (!message.commit) {
             // Reply immediately to Abort client decision
-            getSender().tell(new TxnResultMessage(false), getSelf());
+            final TxnResultMessage abortMessage = new TxnResultMessage(false);
+            getSender().tell(abortMessage, getSelf());
+            LOGGER.debug("Coordinator {} send TxnResultMessage {}", id, abortMessage);
         }
     }
 
-    /*-- Actor methods -------------------------------------------------------- */
-    /*private boolean checkCommit() {
-        for (Boolean decision : this.decisions) {
-            if (!decision) {
-                return false;
-            }
-        }
-        return true;
-    }*/
+    /**
+     * Callback for {@link ResponseMessage} message.
+     *
+     * @param message Received message
+     */
+    private void onResponseMessage(ResponseMessage message) {
+        LOGGER.debug("Coordinator {} received ResponseMessage {}", id, message);
 
-    /*-- Message handlers ----------------------------------------------------- */
-    /*
-    private void onResponseMsg(ResponseMsg msg) {
-        // Store Yes or No from servers
-        this.decisions.add(msg.decision);
-        if (this.decisions.size() == this.dataStores.size()) {
-            // Communicate Abort or Commit to servers
-            boolean decision = checkCommit();
-            System.out.printf("%s decides:%s\n", getSelf().path().name(), decision);
-            this.dataStores.forEach(i -> i.tell(new DecisionMsg(msg.transactionId, decision), getSender()));
-            this.transactions.get(msg.transactionId).tell(new TxnResultMsg(decision), getSender());
-            this.decisions.clear();
-            this.transactions.remove(msg.transactionId);
+        decisions.add(message.decision);
+        if (decisions.size() == dataStores.size()) {
+
+            final boolean decision = checkCommit();
+            LOGGER.info("Coordinator {} decided to commit/abort: {}", id, decision);
+
+            final DecisionMessage outMessage = new DecisionMessage(message.transactionId, decision);
+            dataStores.forEach(i -> i.tell(outMessage, getSender()));
+            LOGGER.debug("Coordinator {} send to DataStores DecisionMessage {}", id, outMessage);
+
+            final TxnResultMessage resultMessage = new TxnResultMessage(decision);
+            transactions.get(message.transactionId).actorRef.tell(resultMessage, getSender());
+            LOGGER.debug("Coordinator {} send to Client TxnResultMessage {}", id, resultMessage);
+
+            decisions.clear();
+            transactions.remove(message.transactionId);
         }
-    }*/
+
+    }
+
 }
