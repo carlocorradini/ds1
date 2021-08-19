@@ -22,10 +22,10 @@ public abstract class TwoPcMessage extends TxnMessage implements Serializable {
             .create();
 
     /**
-     * Boolean variable used to communicate a decision.
+     * Decision made.
      */
     @Expose
-    public final boolean decision;
+    public final TwoPcDecision decision;
 
     /**
      * Construct a new TwoPCMessage class.
@@ -33,7 +33,7 @@ public abstract class TwoPcMessage extends TxnMessage implements Serializable {
      * @param transactionId Transaction id
      * @param decision      Decision
      */
-    public TwoPcMessage(UUID transactionId, boolean decision) {
+    public TwoPcMessage(UUID transactionId, TwoPcDecision decision) {
         super(transactionId);
         this.decision = decision;
     }

@@ -5,6 +5,7 @@ import it.unitn.disi.ds1.Item;
 import it.unitn.disi.ds1.message.op.read.ReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.read.ReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.write.WriteCoordinatorMessage;
+import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecisionMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcRequestMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcResponseMessage;
@@ -166,9 +167,9 @@ public final class DataStore extends Actor {
     private void onRequestMessage(TwoPcRequestMessage message) {
         LOGGER.debug("DataStore {} received RequestMessage: {}", id, message);
 
-        if (message.decision) {
+        if (message.decision == TwoPcDecision.COMMIT) {
             // Inform that it can commit
-            final TwoPcResponseMessage outMessage = new TwoPcResponseMessage(id, message.transactionId, canCommit(message.transactionId));
+            final TwoPcResponseMessage outMessage = new TwoPcResponseMessage(id, message.transactionId, canCommit(message.transactionId) ? TwoPcDecision.COMMIT : TwoPcDecision.ABORT);
             getSender().tell(outMessage, getSender());
             LOGGER.debug("DataStore {} send ResponseMessage: {}", id, outMessage);
         } else {
@@ -186,7 +187,7 @@ public final class DataStore extends Actor {
     private void onDecisionMessage(TwoPcDecisionMessage message) {
         LOGGER.debug("DataStore {} received DecisionMessage: {}", id, message);
 
-        if (message.decision) {
+        if (message.decision == TwoPcDecision.COMMIT) {
             // Commit
             storage.putAll(workspaces.get(message.transactionId));
             LOGGER.info("DataStore {} successfully committed transaction {}", id, message.transactionId);

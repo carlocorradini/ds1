@@ -34,7 +34,7 @@ public final class TwoPcResponseMessage extends TwoPcMessage implements Serializ
      * @param transactionId Transaction id
      * @param decision      Decision
      */
-    public TwoPcResponseMessage(int dataStoreId, UUID transactionId, boolean decision) {
+    public TwoPcResponseMessage(int dataStoreId, UUID transactionId, TwoPcDecision decision) {
         super(transactionId, decision);
         this.dataStoreId = dataStoreId;
     }

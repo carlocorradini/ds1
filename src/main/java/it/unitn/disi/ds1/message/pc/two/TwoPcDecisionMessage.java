@@ -27,7 +27,7 @@ public final class TwoPcDecisionMessage extends TwoPcMessage implements Serializ
      * @param transactionId Transaction id
      * @param decision      Decision
      */
-    public TwoPcDecisionMessage(UUID transactionId, boolean decision) {
+    public TwoPcDecisionMessage(UUID transactionId, TwoPcDecision decision) {
         super(transactionId, decision);
     }
 

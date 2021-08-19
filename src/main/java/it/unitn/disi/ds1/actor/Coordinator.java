@@ -3,6 +3,7 @@ package it.unitn.disi.ds1.actor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.japi.Pair;
+import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecisionMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcResponseMessage;
 import it.unitn.disi.ds1.message.txn.TxnEndMessage;
@@ -50,7 +51,7 @@ public final class Coordinator extends Actor {
     private final Map<UUID, Set<Integer>> dataStoresAffectedInTransaction;
 
     // TODO
-    private final Map<UUID, List<Pair<Integer, Boolean>>> TransactionDecisions;
+    private final Map<UUID, List<Pair<Integer, TwoPcDecision>>> TransactionDecisions;
 
     // --- Constructors ---
 
@@ -128,8 +129,8 @@ public final class Coordinator extends Actor {
      * @param decisions List of DataStores decisions
      * @return True can commit, otherwise not
      */
-    private boolean canCommit(List<Pair<Integer, Boolean>> decisions) {
-        return decisions.stream().allMatch(Pair::second);
+    private boolean canCommit(List<Pair<Integer, TwoPcDecision>> decisions) {
+        return decisions.stream().allMatch(decision -> decision.second() == TwoPcDecision.COMMIT);
     }
 
     // --- Message handlers --
@@ -227,7 +228,7 @@ public final class Coordinator extends Actor {
         LOGGER.debug("Coordinator {} received TxnEndMessage {}", id, message);
 
         final UUID transactionId = clientIdToTransactionId.get(message.clientId);
-        final TwoPcRequestMessage outMessage = new TwoPcRequestMessage(transactionId, message.commit);
+        final TwoPcRequestMessage outMessage = new TwoPcRequestMessage(transactionId, message.commit ? TwoPcDecision.COMMIT : TwoPcDecision.ABORT);
 
         // FIXME Cambiare id di accesso Data Store ???
         final Set<ActorRef> dataStoresToContact = new HashSet<>();
@@ -253,32 +254,33 @@ public final class Coordinator extends Actor {
         LOGGER.debug("Coordinator {} received ResponseMessage {}", id, message);
 
         // Obtain or create the list of DataStores decision
-        final List<Pair<Integer, Boolean>> decisions = TransactionDecisions.computeIfAbsent(message.transactionId, k -> new ArrayList<>());
+        final List<Pair<Integer, TwoPcDecision>> decisions = TransactionDecisions.computeIfAbsent(message.transactionId, k -> new ArrayList<>());
         // Add decision of the DataStore
         decisions.add(Pair.create(message.dataStoreId, message.decision));
 
         // Data stores affected in current transaction
         final Set<ActorRef> dataStoresToContact = new HashSet<>();
         dataStoresAffectedInTransaction.get(message.transactionId).forEach(dataStoreId -> dataStoresToContact.add(dataStores.get(dataStoreId)));
-        ;
 
         // Check if the number of decisions has reached all the DataStores
         if (decisions.size() == dataStoresToContact.size()) {
-            final boolean canCommit = canCommit(decisions);
+            final TwoPcDecision decision;
 
-            if (canCommit) {
+            if (canCommit(decisions)) {
+                decision = TwoPcDecision.COMMIT;
                 LOGGER.info("Coordinator {} decided to commit: {}", id, decisions);
             } else {
+                decision = TwoPcDecision.ABORT;
                 LOGGER.info("Coordinator {} decided to abort: {}", id, decisions);
             }
 
             // Communicate commit decision to DataStores
-            final TwoPcDecisionMessage outMessageToDataStore = new TwoPcDecisionMessage(message.transactionId, canCommit);
+            final TwoPcDecisionMessage outMessageToDataStore = new TwoPcDecisionMessage(message.transactionId, decision);
             dataStoresToContact.forEach(dataStore -> dataStore.tell(outMessageToDataStore, getSender()));
             LOGGER.debug("Coordinator {} send to DataStores DecisionMessage: {}", id, outMessageToDataStore);
 
             // Communicate commit decision to Client
-            final TxnResultMessage outMessageToClient = new TxnResultMessage(canCommit);
+            final TxnResultMessage outMessageToClient = new TxnResultMessage(decision == TwoPcDecision.COMMIT);
             transactionIdToClientRef.get(message.transactionId).tell(outMessageToClient, getSender());
             LOGGER.debug("Coordinator {} send to Client TxnResultMessage: {}", id, outMessageToClient);
 
