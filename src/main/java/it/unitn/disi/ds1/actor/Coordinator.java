@@ -285,7 +285,7 @@ public final class Coordinator extends Actor {
             }
 
             // Communicate commit decision to all affected DataStore(s)
-            final TwoPcDecisionMessage outMessageToDataStore = new TwoPcDecisionMessage(message.transactionId, decision);
+            final TwoPcDecisionMessage outMessageToDataStore = new TwoPcDecisionMessage(id, message.transactionId, decision);
             affectedDataStores.forEach(dataStore -> {
                 dataStore.ref.tell(outMessageToDataStore, getSender());
                 LOGGER.trace("Coordinator {} send to affected DataStore {} involving transaction {} TwoPcDecisionMessage: {}", id, dataStore.id, message.transactionId, outMessageToDataStore);

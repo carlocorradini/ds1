@@ -250,8 +250,7 @@ public final class DataStore extends Actor {
      * @param message Received message
      */
     private void onTwoPcDecisionMessage(TwoPcDecisionMessage message) {
-        // Add coordinator id
-        LOGGER.debug("DataStore {} received TwoPcDecisionMessage: {}", id, message);
+        LOGGER.debug("DataStore {} received from Coordinator {} TwoPcDecisionMessage: {}", id, message.coordinatorId, message);
 
         if (message.decision == TwoPcDecision.COMMIT) {
             // Commit

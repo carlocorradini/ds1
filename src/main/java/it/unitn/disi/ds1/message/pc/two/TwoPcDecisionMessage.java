@@ -3,6 +3,7 @@ package it.unitn.disi.ds1.message.pc.two;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.annotations.Expose;
 
 import java.io.Serializable;
 import java.util.UUID;
@@ -22,13 +23,21 @@ public final class TwoPcDecisionMessage extends TwoPcMessage implements Serializ
             .create();
 
     /**
+     * {@link it.unitn.disi.ds1.actor.Coordinator} id.
+     */
+    @Expose
+    public final int coordinatorId;
+
+    /**
      * Construct a new DecisionMessage class.
      *
+     * @param coordinatorId Coordinator id
      * @param transactionId Transaction id
      * @param decision      Decision
      */
-    public TwoPcDecisionMessage(UUID transactionId, TwoPcDecision decision) {
+    public TwoPcDecisionMessage(int coordinatorId, UUID transactionId, TwoPcDecision decision) {
         super(transactionId, decision);
+        this.coordinatorId = coordinatorId;
     }
 
     @Override
