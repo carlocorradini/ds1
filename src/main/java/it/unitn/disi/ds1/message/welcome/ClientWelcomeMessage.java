@@ -27,7 +27,7 @@ public final class ClientWelcomeMessage implements Serializable {
             .create();
 
     /**
-     * List of available {@link it.unitn.disi.ds1.actor.Client Client(s)}.
+     * Available {@link it.unitn.disi.ds1.actor.Client Client(s)}.
      */
     @Expose
     public final List<ActorMetadata> coordinators;
@@ -41,7 +41,7 @@ public final class ClientWelcomeMessage implements Serializable {
     /**
      * Construct a new ClientWelcomeMessage class.
      *
-     * @param coordinators List of {@link it.unitn.disi.ds1.actor.Client Client(s)} metadata
+     * @param coordinators {@link it.unitn.disi.ds1.actor.Client Client(s)} metadata
      * @param maxItemKey   Maximum {@link Item Item} key
      */
     public ClientWelcomeMessage(List<ActorMetadata> coordinators, int maxItemKey) {

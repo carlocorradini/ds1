@@ -35,7 +35,7 @@ public final class Coordinator extends Actor {
     private static final Logger LOGGER = LogManager.getLogger(Coordinator.class);
 
     /**
-     * List of {@link DataStore DataStore(s)} metadata.
+     * {@link DataStore DataStore(s)} metadata.
      */
     private final List<ActorMetadata> dataStores;
 

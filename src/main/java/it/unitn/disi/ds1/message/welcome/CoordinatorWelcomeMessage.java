@@ -26,7 +26,7 @@ public final class CoordinatorWelcomeMessage implements Serializable {
             .create();
 
     /**
-     * List of available {@link it.unitn.disi.ds1.actor.DataStore DataStore(s)}.
+     * Available {@link it.unitn.disi.ds1.actor.DataStore DataStore(s)}.
      */
     @Expose
     public final List<ActorMetadata> dataStores;
@@ -34,7 +34,7 @@ public final class CoordinatorWelcomeMessage implements Serializable {
     /**
      * Construct a new CoordinatorWelcomeMessage class.
      *
-     * @param dataStores List of {@link it.unitn.disi.ds1.actor.DataStore DataStore(s)} metadata
+     * @param dataStores {@link it.unitn.disi.ds1.actor.DataStore DataStore(s)} metadata
      */
     public CoordinatorWelcomeMessage(List<ActorMetadata> dataStores) {
         this.dataStores = Collections.unmodifiableList(dataStores);

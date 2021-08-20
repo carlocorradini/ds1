@@ -11,9 +11,7 @@ import it.unitn.disi.ds1.message.welcome.CoordinatorWelcomeMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Scanner;
+import java.util.*;
 import java.util.stream.IntStream;
 
 /**
@@ -23,7 +21,7 @@ public final class Main {
     /**
      * Number of {@link DataStore Data Store(s)}.
      */
-    private final static int N_DATA_STORES = 3;
+    private final static int N_DATA_STORES = 1;
 
     /**
      * Number of {@link Coordinator Coordinator(s)}.

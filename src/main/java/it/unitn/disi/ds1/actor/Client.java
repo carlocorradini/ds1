@@ -51,7 +51,7 @@ public final class Client extends Actor {
     private static final int RAND_LENGTH_RANGE = MAX_TXN_LENGTH - MIN_TXN_LENGTH + 1;
 
     /**
-     * List of {@link Coordinator Coordinator(s)} metadata.
+     * {@link Coordinator Coordinator(s)} metadata.
      */
     private final List<ActorMetadata> coordinators;
 
