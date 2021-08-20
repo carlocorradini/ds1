@@ -111,6 +111,42 @@ public final class DataStore extends Actor {
         });
     }
 
+    /**
+     * Return true if is able to get locks on affected {@link Item} by {@link UUID transaction}, otherwise false.
+     *
+     * @param transactionId Transaction id
+     * @return True if it gets locks, false otherwise
+     */
+    private boolean getLock(UUID transactionId) {
+        // TODO: refactor with allMatch()
+        // Obtain private workspace of the transaction
+        final Map<Integer, Item> workspace = workspaces.get(transactionId);
+        for (Map.Entry<Integer, Item> entry : workspace.entrySet()) {
+            final Item itemInStorage = itemByKey(entry.getKey());
+            if (itemInStorage.locked) {
+                // Item already locked
+                // Clean possible already set locks
+                cleanLock(transactionId);
+                return false;
+            } else {
+                // Lock item
+                itemInStorage.locked = true;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Clean all possible locks on affected {@link Item} considering one transaction.
+     *
+     * @param transactionId Transaction id
+     */
+    private void cleanLock(UUID transactionId) {
+        // Obtain private workspace of the transaction
+        final Map<Integer, Item> workspace = workspaces.get(transactionId);
+        workspace.forEach((key, value) -> itemByKey(key).locked = false);
+    }
+
     // --- Message handlers ---
 
     /**
@@ -154,7 +190,7 @@ public final class DataStore extends Actor {
 
         // Add new item to workspace
         final Item itemInStorage = itemByKey(message.key);
-        final Item newItemInWorkspace = new Item(message.value, itemInStorage.version + 1);
+        final Item newItemInWorkspace = new Item(message.value, itemInStorage.version + 1, false);
         if (workspace.isEmpty()) {
             LOGGER.trace("DataStore {} add write request involving transaction {} in a new workspace: {}", id, message.transactionId, newItemInWorkspace);
         } else {
@@ -173,8 +209,10 @@ public final class DataStore extends Actor {
 
         if (message.decision == TwoPcDecision.COMMIT) {
             // Inform Coordinator commit decision
+            // TODO: try getting locks on storage
+            final boolean canLock = getLock(message.transactionId);
             final boolean canCommit = canCommit(message.transactionId);
-            final TwoPcVoteResponseMessage outMessage = new TwoPcVoteResponseMessage(id, message.transactionId, TwoPcDecision.valueOf(canCommit));
+            final TwoPcVoteResponseMessage outMessage = new TwoPcVoteResponseMessage(id, message.transactionId, TwoPcDecision.valueOf(canCommit && canLock));
             getSender().tell(outMessage, getSender());
             LOGGER.debug("DataStore {} send TwoPcVoteResponseMessage: {}", id, outMessage);
         } else {
@@ -202,5 +240,7 @@ public final class DataStore extends Actor {
         // Clean resources
         workspaces.remove(message.transactionId);
         LOGGER.trace("DataStore {} clean resources involving transaction {}", id, message.transactionId);
+
+        //TODO: release locks on storage
     }
 }

@@ -19,6 +19,8 @@ public final class Item {
      */
     public static final int DEFAULT_VERSION = 0;
 
+    public static final boolean DEFAULT_LOCKED = false;
+
     /**
      * Gson instance.
      */
@@ -41,15 +43,19 @@ public final class Item {
     @Expose
     public final int version;
 
+    @Expose
+    public boolean locked;
+
     /**
      * Construct an item with the given value and version.
-     *
-     * @param value   Value of the item
+     *  @param value   Value of the item
      * @param version Version of the item
+     * @param locked
      */
-    public Item(int value, int version) {
+    public Item(int value, int version, boolean locked) {
         this.value = value;
         this.version = version;
+        this.locked = locked;
     }
 
     /**
@@ -58,14 +64,14 @@ public final class Item {
      * @param value Value of the item
      */
     public Item(int value) {
-        this(value, DEFAULT_VERSION);
+        this(value, DEFAULT_VERSION, DEFAULT_LOCKED);
     }
 
     /**
      * Construct an item with default value set to DEFAULT_VALUE and default version set to DEFAULT_VERSION.
      */
     public Item() {
-        this(DEFAULT_VALUE, DEFAULT_VERSION);
+        this(DEFAULT_VALUE, DEFAULT_VERSION, DEFAULT_LOCKED);
     }
 
     @Override
