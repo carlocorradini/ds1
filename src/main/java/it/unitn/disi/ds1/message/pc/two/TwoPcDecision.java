@@ -28,25 +28,6 @@ public enum TwoPcDecision {
     }
 
     /**
-     * Return true if decision is to COMMIT, false otherwise.
-     *
-     * @return True COMMIT, false otherwise
-     */
-    public boolean toBoolean() {
-        return toBoolean(this);
-    }
-
-    /**
-     * Return true if decision is to COMMIT, false otherwise.
-     *
-     * @param decision Decision
-     * @return True COMMIT, false otherwise
-     */
-    public static boolean toBoolean(TwoPcDecision decision) {
-        return decision == COMMIT;
-    }
-
-    /**
      * Return {@link TwoPcDecision} given a boolean decision value.
      *
      * @param decision Boolean decision

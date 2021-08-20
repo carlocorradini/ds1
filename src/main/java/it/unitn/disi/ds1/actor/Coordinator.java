@@ -246,7 +246,7 @@ public final class Coordinator extends Actor {
         LOGGER.debug("Coordinator {} send to {} affected DataStore(s) TwoPcRequestMessage: {}", id, affectedDataStores.size(), outMessage);
 
         // If Client decided to abort, reply immediately
-        if (!message.decision.toBoolean()) {
+        if (message.decision == TwoPcDecision.ABORT) {
             final TxnResultMessage abortMessage = new TxnResultMessage(message.decision);
             getSender().tell(abortMessage, getSelf());
             LOGGER.debug("Coordinator {} send to Client {} due to Client abort TxnResultMessage: {}", id, message.clientId, abortMessage);

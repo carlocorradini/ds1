@@ -342,7 +342,7 @@ public final class Client extends Actor {
     private void onTxnResultMsg(TxnResultMessage message) {
         LOGGER.debug("Client {} received TxnResultMessage with decision {}: {}", id, message.decision, message);
 
-        if (message.decision.toBoolean()) {
+        if (message.decision == TwoPcDecision.COMMIT) {
             txnCommitted++;
             LOGGER.info("Client {} TXNs COMMIT OK ({}/{})", id, txnCommitted, txnAttempted);
         } else {
