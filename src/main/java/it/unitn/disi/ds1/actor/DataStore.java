@@ -238,7 +238,6 @@ public final class DataStore extends Actor {
             case ABORT: {
                 // Clean resources
                 cleanResources(message.transactionId);
-                workspaces.remove(message.transactionId);
                 LOGGER.debug("DataStore {} clean resources involving transaction {} due to Client abort", id, message.transactionId);
                 break;
             }
