@@ -5,6 +5,7 @@ import akka.actor.ActorSystem;
 import it.unitn.disi.ds1.actor.Client;
 import it.unitn.disi.ds1.actor.Coordinator;
 import it.unitn.disi.ds1.actor.DataStore;
+import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.message.welcome.ClientWelcomeMessage;
 import it.unitn.disi.ds1.message.welcome.CoordinatorWelcomeMessage;
 import org.apache.logging.log4j.LogManager;
@@ -47,28 +48,28 @@ public final class Main {
     public static void main(String[] args) {
         // --- Variables ---
         final ActorSystem system = ActorSystem.create("banky");
-        final List<ActorRef> dataStores = new ArrayList<>(N_DATA_STORES);
-        final List<ActorRef> coordinators = new ArrayList<>(N_COORDINATORS);
-        final List<ActorRef> clients = new ArrayList<>(N_CLIENTS);
+        final List<ActorMetadata> dataStores = new ArrayList<>(N_DATA_STORES);
+        final List<ActorMetadata> coordinators = new ArrayList<>(N_COORDINATORS);
+        final List<ActorMetadata> clients = new ArrayList<>(N_CLIENTS);
 
         // --- Initialization ---
         // Data stores
         LOGGER.info("Initializing {} data stores", N_DATA_STORES);
-        IntStream.range(0, N_DATA_STORES).forEach(i -> dataStores.add(system.actorOf(DataStore.props(i))));
+        IntStream.range(0, N_DATA_STORES).forEach(id -> dataStores.add(ActorMetadata.of(id, system.actorOf(DataStore.props(id)))));
         // Coordinators
         LOGGER.info("Initializing {} coordinators", N_COORDINATORS);
-        IntStream.range(0, N_COORDINATORS).forEach(i -> coordinators.add(system.actorOf(Coordinator.props(i))));
+        IntStream.range(0, N_COORDINATORS).forEach(id -> coordinators.add(ActorMetadata.of(id, system.actorOf(Coordinator.props(id)))));
         // Clients
         LOGGER.info("Initializing {} clients", N_CLIENTS);
-        IntStream.range(0, N_CLIENTS).forEach(i -> clients.add(system.actorOf(Client.props(i))));
+        IntStream.range(0, N_CLIENTS).forEach(id -> clients.add(ActorMetadata.of(id, system.actorOf(Client.props(id)))));
 
         // --- Welcome ---
         // Coordinators
         final CoordinatorWelcomeMessage coordinatorWelcomeMessage = new CoordinatorWelcomeMessage(dataStores);
-        coordinators.forEach(coordinator -> coordinator.tell(coordinatorWelcomeMessage, ActorRef.noSender()));
+        coordinators.forEach(coordinator -> coordinator.ref.tell(coordinatorWelcomeMessage, ActorRef.noSender()));
         // Clients
         final ClientWelcomeMessage clientWelcomeMessage = new ClientWelcomeMessage(coordinators, MAX_ITEM_KEY);
-        clients.forEach(client -> client.tell(clientWelcomeMessage, ActorRef.noSender()));
+        clients.forEach(client -> client.ref.tell(clientWelcomeMessage, ActorRef.noSender()));
 
         // --- Run ---
         // Wait until `ENTER` key

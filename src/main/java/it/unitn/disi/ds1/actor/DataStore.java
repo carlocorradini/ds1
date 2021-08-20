@@ -1,7 +1,7 @@
 package it.unitn.disi.ds1.actor;
 
 import akka.actor.Props;
-import it.unitn.disi.ds1.Item;
+import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.message.op.read.ReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.read.ReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.write.WriteCoordinatorMessage;
@@ -69,8 +69,8 @@ public final class DataStore extends Actor {
         return receiveBuilder()
                 .match(ReadCoordinatorMessage.class, this::onReadCoordinatorMessage)
                 .match(WriteCoordinatorMessage.class, this::onWriteCoordinatorMessage)
-                .match(TwoPcRequestMessage.class, this::onRequestMessage)
-                .match(TwoPcDecisionMessage.class, this::onDecisionMessage)
+                .match(TwoPcRequestMessage.class, this::onTwoPcRequestMessage)
+                .match(TwoPcDecisionMessage.class, this::onTwoPcDecisionMessage)
                 .build();
     }
 
@@ -151,12 +151,16 @@ public final class DataStore extends Actor {
 
         // Obtain private workspace, otherwise create
         final Map<Integer, Item> workspace = workspaces.computeIfAbsent(message.transactionId, k -> new HashMap<>());
+
         // Add new item to workspace
         final Item itemInStorage = itemByKey(message.key);
         final Item newItemInWorkspace = new Item(message.value, itemInStorage.version + 1);
+        if (workspace.isEmpty()) {
+            LOGGER.trace("DataStore {} add write request involving transaction {} in a new workspace: {}", id, message.transactionId, newItemInWorkspace);
+        } else {
+            LOGGER.trace("DataStore {} add write request involving transaction {} in an existing workspace: {}", id, message.transactionId, newItemInWorkspace);
+        }
         workspace.put(message.key, newItemInWorkspace);
-
-        LOGGER.info("DataStore {} write request workspace in transaction {}: {}", id, message.transactionId, newItemInWorkspace);
     }
 
     /**
@@ -164,18 +168,19 @@ public final class DataStore extends Actor {
      *
      * @param message Received message
      */
-    private void onRequestMessage(TwoPcRequestMessage message) {
-        LOGGER.debug("DataStore {} received RequestMessage: {}", id, message);
+    private void onTwoPcRequestMessage(TwoPcRequestMessage message) {
+        LOGGER.debug("DataStore {} received TwoPcRequestMessage: {}", id, message);
 
         if (message.decision == TwoPcDecision.COMMIT) {
-            // Inform that it can commit
-            final TwoPcResponseMessage outMessage = new TwoPcResponseMessage(id, message.transactionId, canCommit(message.transactionId) ? TwoPcDecision.COMMIT : TwoPcDecision.ABORT);
+            // Inform Coordinator commit decision
+            final boolean canCommit = canCommit(message.transactionId);
+            final TwoPcResponseMessage outMessage = new TwoPcResponseMessage(id, message.transactionId, canCommit ? TwoPcDecision.COMMIT : TwoPcDecision.ABORT);
             getSender().tell(outMessage, getSender());
-            LOGGER.debug("DataStore {} send ResponseMessage: {}", id, outMessage);
+            LOGGER.debug("DataStore {} send TwoPcResponseMessage: {}", id, outMessage);
         } else {
-            // Delete workspace for the aborted transaction
+            // Delete workspace due to Client aborted transaction
             workspaces.remove(message.transactionId);
-            LOGGER.debug("DataStore {} deleted workspace {} due to client abort", id, message.transactionId);
+            LOGGER.debug("DataStore {} deleted workspace {} due to Client abort", id, message.transactionId);
         }
     }
 
@@ -184,8 +189,9 @@ public final class DataStore extends Actor {
      *
      * @param message Received message
      */
-    private void onDecisionMessage(TwoPcDecisionMessage message) {
-        LOGGER.debug("DataStore {} received DecisionMessage: {}", id, message);
+    private void onTwoPcDecisionMessage(TwoPcDecisionMessage message) {
+        // Add coordinator id
+        LOGGER.debug("DataStore {} received TwoPcDecisionMessage: {}", id, message);
 
         if (message.decision == TwoPcDecision.COMMIT) {
             // Commit
@@ -193,9 +199,8 @@ public final class DataStore extends Actor {
             LOGGER.info("DataStore {} successfully committed transaction {}", id, message.transactionId);
         }
 
-        // Clean workspace of the current transaction
+        // Clean resources
         workspaces.remove(message.transactionId);
-        LOGGER.trace("DataStore {} clean resources", id);
+        LOGGER.trace("DataStore {} clean resources involving transaction {}", id, message.transactionId);
     }
-
 }

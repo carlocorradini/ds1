@@ -4,6 +4,8 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import akka.actor.*;
+import it.unitn.disi.ds1.etc.ActorMetadata;
+import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.message.*;
 import it.unitn.disi.ds1.message.op.read.ReadMessage;
 import it.unitn.disi.ds1.message.op.read.ReadResultMessage;
@@ -49,9 +51,9 @@ public final class Client extends Actor {
     private static final int RAND_LENGTH_RANGE = MAX_TXN_LENGTH - MIN_TXN_LENGTH + 1;
 
     /**
-     * List of available {@link Coordinator Coordinator(s)}.
+     * List of {@link Coordinator Coordinator(s)} metadata.
      */
-    private final List<ActorRef> coordinators;
+    private final List<ActorMetadata> coordinators;
 
     /**
      * Maximum key associated to items in {@link DataStore DataStore(s)F}.
@@ -77,25 +79,25 @@ public final class Client extends Actor {
     /**
      * {@link Coordinator} of the transaction.
      */
-    private ActorRef txnCoordinator;
+    private ActorMetadata txnCoordinator;
 
     /**
-     * First {@link it.unitn.disi.ds1.Item} key of the transaction.
+     * First {@link Item} key of the transaction.
      */
     private int txnFirstKey;
 
     /**
-     * Second {@link it.unitn.disi.ds1.Item} key of the transaction.
+     * Second {@link Item} key of the transaction.
      */
     private int txnSecondKey;
 
     /**
-     * First {@link it.unitn.disi.ds1.Item} value of the transaction.
+     * First {@link Item} value of the transaction.
      */
     private Integer txnFirstValue;
 
     /**
-     * Second {@link it.unitn.disi.ds1.Item} value of the transaction.
+     * Second {@link Item} value of the transaction.
      */
     private Integer txnSecondValue;
 
@@ -171,8 +173,8 @@ public final class Client extends Actor {
         // Contact a random coordinator and begin a transaction
         final TxnBeginMessage outMessage = new TxnBeginMessage(id);
         txnCoordinator = coordinators.get(random.nextInt(coordinators.size()));
-        txnCoordinator.tell(outMessage, getSelf());
-        LOGGER.debug("Client {} send TxnBeginMessage: {}", id, outMessage);
+        txnCoordinator.ref.tell(outMessage, getSelf());
+        LOGGER.debug("Client {} send to Coordinator {} TxnBeginMessage: {}", id, txnCoordinator.id, outMessage);
 
         // Total number of operations
         final int txtOpExtra = RAND_LENGTH_RANGE > 0 ? random.nextInt(RAND_LENGTH_RANGE) : 0;
@@ -198,16 +200,16 @@ public final class Client extends Actor {
         final boolean commit = random.nextDouble() < COMMIT_PROBABILITY;
         final TxnEndMessage outMessage = new TxnEndMessage(id, commit);
 
-        txnCoordinator.tell(outMessage, getSelf());
+        txnCoordinator.ref.tell(outMessage, getSelf());
         txnFirstValue = null;
         txnSecondValue = null;
 
-        LOGGER.debug("Client {} send TxnEndMessage: {}", id, outMessage);
+        LOGGER.debug("Client {} send to Coordinator {} TxnEndMessage: {}", id, txnCoordinator.id, outMessage);
         LOGGER.info("Client {} END transaction", id);
     }
 
     /**
-     * Read two {@link it.unitn.disi.ds1.Item items}.
+     * Read two {@link Item items}.
      */
     private void readTwo() {
         // Obtain items keys
@@ -217,13 +219,13 @@ public final class Client extends Actor {
 
         // Read request 1
         final ReadMessage outFirstMessage = new ReadMessage(id, txnFirstKey);
-        txnCoordinator.tell(outFirstMessage, getSelf());
-        LOGGER.debug("Client {} send ReadMessage: {}", id, outFirstMessage);
+        txnCoordinator.ref.tell(outFirstMessage, getSelf());
+        LOGGER.debug("Client {} send to Coordinator {} ReadMessage: {}", id, txnCoordinator.id, outFirstMessage);
 
         // Read request 2
         final ReadMessage outSecondMessage = new ReadMessage(id, txnSecondKey);
-        txnCoordinator.tell(outSecondMessage, getSelf());
-        LOGGER.debug("Client {} send ReadMessage: {}", id, outSecondMessage);
+        txnCoordinator.ref.tell(outSecondMessage, getSelf());
+        LOGGER.debug("Client {} send to Coordinator {} ReadMessage: {}", id, txnCoordinator.id, outSecondMessage);
 
         // Delete the current read values
         txnFirstValue = null;
@@ -233,7 +235,7 @@ public final class Client extends Actor {
     }
 
     /**
-     * Write two {@link it.unitn.disi.ds1.Item items}.
+     * Write two {@link Item items}.
      */
     private void writeTwo() {
         // Amount to add/remove
@@ -245,13 +247,13 @@ public final class Client extends Actor {
 
         // Write request 1
         final WriteMessage outFirstMessage = new WriteMessage(id, txnFirstKey, newFirstValue);
-        txnCoordinator.tell(outFirstMessage, getSelf());
-        LOGGER.debug("Client {} send WriteMessage: {}", id, outFirstMessage);
+        txnCoordinator.ref.tell(outFirstMessage, getSelf());
+        LOGGER.debug("Client {} send to Coordinator {} WriteMessage: {}", id, txnCoordinator.id, outFirstMessage);
 
         // Write request 2
         final WriteMessage outSecondMessage = new WriteMessage(id, txnSecondKey, newSecondValue);
-        txnCoordinator.tell(outSecondMessage, getSelf());
-        LOGGER.debug("Client {} send WriteMessage: {}", id, outSecondMessage);
+        txnCoordinator.ref.tell(outSecondMessage, getSelf());
+        LOGGER.debug("Client {} send to Coordinator {} WriteMessage: {}", id, txnCoordinator.id, outSecondMessage);
 
         LOGGER.info("Client {} WRITE #{} taken {} ({}, {}), ({}, {})", id, txnOpDone, amount, txnFirstKey, newFirstValue, txnSecondKey, newSecondValue);
     }
@@ -318,7 +320,7 @@ public final class Client extends Actor {
 
         final boolean opDone = (txnFirstValue != null && txnSecondValue != null);
 
-        // Read or also write?
+        // Read or also write ?
         final boolean doWrite = random.nextDouble() < WRITE_PROBABILITY;
         if (doWrite && opDone) writeTwo();
 
@@ -353,6 +355,7 @@ public final class Client extends Actor {
     }
 
     /*-- Message handlers ----------------------------------------------------- */
+    // TODO
     private void onStopMsg(StopMsg msg) {
         getContext().stop(getSelf());
     }

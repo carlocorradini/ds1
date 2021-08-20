@@ -3,6 +3,7 @@ package it.unitn.disi.ds1.message.op.read;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
+import it.unitn.disi.ds1.etc.Item;
 
 import java.io.Serializable;
 
@@ -27,7 +28,7 @@ public final class ReadMessage implements Serializable {
     public final int clientId;
 
     /**
-     * {@link it.unitn.disi.ds1.Item} key to read.
+     * {@link Item} key to read.
      */
     @Expose
     public final int key;

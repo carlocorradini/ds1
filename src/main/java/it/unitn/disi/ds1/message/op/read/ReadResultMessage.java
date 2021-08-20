@@ -3,13 +3,14 @@ package it.unitn.disi.ds1.message.op.read;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
+import it.unitn.disi.ds1.etc.Item;
 
 import java.io.Serializable;
 
 /**
  * Reply message to {@link ReadCoordinatorMessage}
  * from {@link it.unitn.disi.ds1.actor.Coordinator} to {@link it.unitn.disi.ds1.actor.Client}
- * having the value of the corresponding key of the {@link it.unitn.disi.ds1.Item}
+ * having the value of the corresponding key of the {@link Item}
  */
 public final class ReadResultMessage implements Serializable {
     private static final long serialVersionUID = 6073342617515584698L;
@@ -22,7 +23,7 @@ public final class ReadResultMessage implements Serializable {
             .create();
 
     /**
-     * {@link it.unitn.disi.ds1.Item} key.
+     * {@link Item} key.
      */
     @Expose
     public final int key;

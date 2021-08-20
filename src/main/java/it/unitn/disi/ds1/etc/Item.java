@@ -1,4 +1,4 @@
-package it.unitn.disi.ds1;
+package it.unitn.disi.ds1.etc;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

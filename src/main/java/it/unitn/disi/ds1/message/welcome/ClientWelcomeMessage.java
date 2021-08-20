@@ -5,9 +5,10 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
 import it.unitn.disi.ds1.adapter.serializer.ActorRefSerializer;
+import it.unitn.disi.ds1.etc.ActorMetadata;
+import it.unitn.disi.ds1.etc.Item;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -29,10 +30,10 @@ public final class ClientWelcomeMessage implements Serializable {
      * List of available {@link it.unitn.disi.ds1.actor.Client Client(s)}.
      */
     @Expose
-    public final List<ActorRef> coordinators;
+    public final List<ActorMetadata> coordinators;
 
     /**
-     * Maximum {@link it.unitn.disi.ds1.Item Item} key.
+     * Maximum {@link Item Item} key.
      */
     @Expose
     public final int maxItemKey;
@@ -40,10 +41,10 @@ public final class ClientWelcomeMessage implements Serializable {
     /**
      * Construct a new ClientWelcomeMessage class.
      *
-     * @param coordinators List of available {@link it.unitn.disi.ds1.actor.Client Client(s)}
-     * @param maxItemKey   Maximum {@link it.unitn.disi.ds1.Item Item} key
+     * @param coordinators List of {@link it.unitn.disi.ds1.actor.Client Client(s)} metadata
+     * @param maxItemKey   Maximum {@link Item Item} key
      */
-    public ClientWelcomeMessage(List<ActorRef> coordinators, int maxItemKey) {
+    public ClientWelcomeMessage(List<ActorMetadata> coordinators, int maxItemKey) {
         this.coordinators = Collections.unmodifiableList(coordinators);
         this.maxItemKey = maxItemKey;
     }

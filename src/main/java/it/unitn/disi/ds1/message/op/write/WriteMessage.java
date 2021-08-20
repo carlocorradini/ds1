@@ -3,6 +3,7 @@ package it.unitn.disi.ds1.message.op.write;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
+import it.unitn.disi.ds1.etc.Item;
 
 import java.io.Serializable;
 
@@ -27,13 +28,13 @@ public final class WriteMessage implements Serializable {
     public final int clientId;
 
     /**
-     * {@link it.unitn.disi.ds1.Item} key to write.
+     * {@link Item} key to write.
      */
     @Expose
     public final int key;
 
     /**
-     * New {@link it.unitn.disi.ds1.Item} value to write.
+     * New {@link Item} value to write.
      */
     @Expose
     public final int value;
