@@ -5,6 +5,8 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
 import it.unitn.disi.ds1.actor.DataStore;
 
+import java.util.UUID;
+
 /**
  * Simple item stored in a {@link DataStore}.
  */
@@ -19,7 +21,10 @@ public final class Item {
      */
     public static final int DEFAULT_VERSION = 0;
 
-    public static final boolean DEFAULT_LOCKED = false;
+    /**
+     * Default locker.
+     */
+    public static final UUID DEFAULT_LOCKER = null;
 
     /**
      * Gson instance.
@@ -43,35 +48,101 @@ public final class Item {
     @Expose
     public final int version;
 
+    /**
+     * {@link UUID Transaction} that is locking the Item.
+     */
     @Expose
-    public boolean locked;
+    public UUID locker;
 
     /**
-     * Construct an item with the given value and version.
-     *  @param value   Value of the item
+     * Construct a new Item class.
+     *
+     * @param value   Value of the item
      * @param version Version of the item
-     * @param locked
+     * @param locker  {@link UUID Transaction} that is locking the item
      */
-    public Item(int value, int version, boolean locked) {
+    public Item(int value, int version, UUID locker) {
         this.value = value;
         this.version = version;
-        this.locked = locked;
+        this.locker = locker;
     }
 
     /**
-     * Construct an item with the given value and default version set to DEFAULT_VERSION.
+     * Construct a new Item class.
+     *
+     * @param value   Value of the item
+     * @param version Version of the item
+     */
+    public Item(int value, int version) {
+        this(value, version, DEFAULT_LOCKER);
+    }
+
+    /**
+     * Construct a new Item class.
      *
      * @param value Value of the item
      */
     public Item(int value) {
-        this(value, DEFAULT_VERSION, DEFAULT_LOCKED);
+        this(value, DEFAULT_VERSION);
     }
 
     /**
-     * Construct an item with default value set to DEFAULT_VALUE and default version set to DEFAULT_VERSION.
+     * Construct a new Item class.
      */
     public Item() {
-        this(DEFAULT_VALUE, DEFAULT_VERSION, DEFAULT_LOCKED);
+        this(DEFAULT_VALUE);
+    }
+
+    /**
+     * Check if Item is locked by a {@link UUID locker}.
+     *
+     * @return True if locked, false otherwise.
+     */
+    public synchronized boolean isLocked() {
+        return locker != null;
+    }
+
+    /**
+     * Check if {@link UUID locker} is the current locker that is locking the Item.
+     * Note that if Item is not locked by any locker the returned value is false.
+     *
+     * @param locker {@link UUID Locker} to check
+     * @return True if same locker, false otherwise
+     */
+    public synchronized boolean isLocker(UUID locker) {
+        return isLocked() && this.locker == locker;
+    }
+
+    /**
+     * Lock the Item by locker and return if the operation has been successful.
+     *
+     * @param locker {@link UUID Locker} trying to lock the Item
+     * @return True if locked, false otherwise
+     */
+    public synchronized boolean lock(UUID locker) {
+        // Check if Item is locked and the locker is different
+        if (isLocked() && !isLocker(locker)) return false;
+
+        // Lock item
+        this.locker = locker;
+        return true;
+    }
+
+    /**
+     * Remove the {@link UUID locker} that is locking the Item.
+     */
+    private synchronized void unlock() {
+        locker = null;
+    }
+
+    /**
+     * Remove the {@link UUID locker} that is locking the Item
+     * only if the locker is the same.
+     *
+     * @param locker {@link UUID Locker} locking the Item
+     */
+    public synchronized void unlockIfIsLocker(UUID locker) {
+        if (isLocker(locker)) unlock();
     }
 
     @Override

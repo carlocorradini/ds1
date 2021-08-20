@@ -77,74 +77,91 @@ public final class DataStore extends Actor {
     // --- Methods ---
 
     /**
-     * Return {@link Item} by key.
+     * Check if {@link UUID transaction} is able to commit.
+     * Checks:
+     * 1. Items version match
+     * 2. Successfully locked items
      *
-     * @param key Item key
-     * @return Item
+     * @param transactionId {@link UUID Transaction} id
+     * @return True if can commit, false otherwise
      */
-    private Item itemByKey(int key) {
-        final Item item = storage.get(key);
-
-        if (item == null) {
-            LOGGER.error("Unable to find Item by key {}", key);
-            getContext().system().terminate();
+    private synchronized boolean canCommit(UUID transactionId) {
+        if (!checkItemsVersion(transactionId)) {
+            LOGGER.debug("DataStore {} check Item(s) version in transaction {} has failed", id, transactionId);
+            return false;
         }
+        LOGGER.debug("DataStore {} check Item(s) version in transaction {} is successful", id, transactionId);
+        if (!lockItems(transactionId)) {
+            LOGGER.debug("DataStore {} lock Item(s) in transaction {} has failed", id, transactionId);
+            return false;
+        }
+        LOGGER.debug("DataStore {} lock Item(s) in transaction {} is successful", id, transactionId);
 
-        return item;
+        // Able to commit
+        LOGGER.debug("DataStore {} can successfully commit transaction {}", id, transactionId);
+        return true;
     }
 
     /**
-     * Return true if is able to commit changes made by {@link UUID transaction}, otherwise false.
+     * Return true if version of the {@link Item Item(s)} in storage and workspace of {@link UUID transaction} match, otherwise false.
      *
      * @param transactionId Transaction id
-     * @return True if it can commit, false otherwise
+     * @return True if match, false otherwise
      */
-    private boolean canCommit(UUID transactionId) {
+    private synchronized boolean checkItemsVersion(UUID transactionId) {
         // Obtain private workspace of the transaction
         final Map<Integer, Item> workspace = workspaces.get(transactionId);
 
         return workspace.entrySet().stream().allMatch((entry) -> {
             final Item itemInWorkSpace = entry.getValue();
-            final Item itemInStorage = itemByKey(entry.getKey());
+            final Item itemInStorage = storage.get(entry.getKey());
 
             return itemInWorkSpace.version == itemInStorage.version + 1;
         });
     }
 
     /**
-     * Return true if is able to get locks on affected {@link Item} by {@link UUID transaction}, otherwise false.
+     * Return true if {@link UUID transaction} is able to lock all {@link Item Item(s)} involved, otherwise false.
      *
      * @param transactionId Transaction id
-     * @return True if it gets locks, false otherwise
+     * @return True if all {@link Item Item(s)} are successfully locked, false otherwise
      */
-    private boolean getLock(UUID transactionId) {
-        // TODO: refactor with allMatch()
+    private synchronized boolean lockItems(UUID transactionId) {
         // Obtain private workspace of the transaction
         final Map<Integer, Item> workspace = workspaces.get(transactionId);
-        for (Map.Entry<Integer, Item> entry : workspace.entrySet()) {
-            final Item itemInStorage = itemByKey(entry.getKey());
-            if (itemInStorage.locked) {
-                // Item already locked
-                // Clean possible already set locks
-                cleanLock(transactionId);
-                return false;
-            } else {
-                // Lock item
-                itemInStorage.locked = true;
-            }
-        }
-        return true;
+
+        // Try to lock all Item(s) in storage involved in transaction
+        final boolean locked = workspace.entrySet().stream()
+                .allMatch(entry -> storage.get(entry.getKey()).lock(transactionId));
+
+        // If operation failed, clean lock in storage
+        if (!locked) cleanLockItems(transactionId);
+
+        return locked;
     }
 
     /**
-     * Clean all possible locks on affected {@link Item} considering one transaction.
+     * Clean possible locked {@link Item Item(s)} that are involved in the {@link UUID transaction}.
+     *
+     * @param transactionId {@link UUID Transaction} id
+     */
+    private synchronized void cleanLockItems(UUID transactionId) {
+        storage.forEach((key, value) -> value.unlockIfIsLocker(transactionId));
+    }
+
+    /**
+     * Clean all resources that involves {@link UUID transaction}.
      *
      * @param transactionId Transaction id
      */
-    private void cleanLock(UUID transactionId) {
-        // Obtain private workspace of the transaction
-        final Map<Integer, Item> workspace = workspaces.get(transactionId);
-        workspace.forEach((key, value) -> itemByKey(key).locked = false);
+    private void cleanResources(UUID transactionId) {
+        if (transactionId == null) return;
+
+        // Clean private workspace
+        workspaces.remove(transactionId);
+        // Clean possible locked Item(s)
+        cleanLockItems(transactionId);
+        LOGGER.trace("DataStore {} clean resources involving transaction {}", id, transactionId);
     }
 
     // --- Message handlers ---
@@ -167,11 +184,11 @@ public final class DataStore extends Actor {
             LOGGER.trace("DataStore {} ReadCoordinatorMessage item {} in transaction {} found in workspace: {}", id, message.key, message.transactionId, item);
         } else {
             // Item in storage
-            item = itemByKey(message.key);
+            item = storage.get(message.key);
             LOGGER.trace("DataStore {} ReadCoordinatorMessage item {} in transaction {} found in storage: {}", id, message.key, message.transactionId, item);
         }
 
-        final ReadResultCoordinatorMessage outMessage = new ReadResultCoordinatorMessage(message.transactionId, message.key, item.value);
+        final ReadResultCoordinatorMessage outMessage = new ReadResultCoordinatorMessage(id, message.transactionId, message.key, item.value);
         getSender().tell(outMessage, getSelf());
 
         LOGGER.debug("DataStore {} send ReadResultCoordinatorMessage: {}", id, outMessage);
@@ -189,8 +206,8 @@ public final class DataStore extends Actor {
         final Map<Integer, Item> workspace = workspaces.computeIfAbsent(message.transactionId, k -> new HashMap<>());
 
         // Add new item to workspace
-        final Item itemInStorage = itemByKey(message.key);
-        final Item newItemInWorkspace = new Item(message.value, itemInStorage.version + 1, false);
+        final Item itemInStorage = storage.get(message.key);
+        final Item newItemInWorkspace = new Item(message.value, itemInStorage.version + 1);
         if (workspace.isEmpty()) {
             LOGGER.trace("DataStore {} add write request involving transaction {} in a new workspace: {}", id, message.transactionId, newItemInWorkspace);
         } else {
@@ -207,18 +224,24 @@ public final class DataStore extends Actor {
     private void onTwoPcVoteRequestMessage(TwoPcVoteRequestMessage message) {
         LOGGER.debug("DataStore {} received TwoPcVoteRequestMessage: {}", id, message);
 
-        if (message.decision == TwoPcDecision.COMMIT) {
-            // Inform Coordinator commit decision
-            // TODO: try getting locks on storage
-            final boolean canLock = getLock(message.transactionId);
-            final boolean canCommit = canCommit(message.transactionId);
-            final TwoPcVoteResponseMessage outMessage = new TwoPcVoteResponseMessage(id, message.transactionId, TwoPcDecision.valueOf(canCommit && canLock));
-            getSender().tell(outMessage, getSender());
-            LOGGER.debug("DataStore {} send TwoPcVoteResponseMessage: {}", id, outMessage);
-        } else {
-            // Delete workspace due to Client aborted transaction
-            workspaces.remove(message.transactionId);
-            LOGGER.debug("DataStore {} deleted workspace {} due to Client abort", id, message.transactionId);
+        // Check client decision
+        switch (message.decision) {
+            case COMMIT: {
+                // Check if transaction can commit
+                final boolean canCommit = canCommit(message.transactionId);
+                // Send response to Coordinator
+                final TwoPcVoteResponseMessage outMessage = new TwoPcVoteResponseMessage(id, message.transactionId, TwoPcDecision.valueOf(canCommit));
+                getSender().tell(outMessage, getSender());
+                LOGGER.debug("DataStore {} send to Coordinator {} TwoPcVoteResponseMessage: {}", id, message.coordinatorId, outMessage);
+                break;
+            }
+            case ABORT: {
+                // Clean resources
+                cleanResources(message.transactionId);
+                workspaces.remove(message.transactionId);
+                LOGGER.debug("DataStore {} clean resources involving transaction {} due to Client abort", id, message.transactionId);
+                break;
+            }
         }
     }
 
@@ -238,9 +261,6 @@ public final class DataStore extends Actor {
         }
 
         // Clean resources
-        workspaces.remove(message.transactionId);
-        LOGGER.trace("DataStore {} clean resources involving transaction {}", id, message.transactionId);
-
-        //TODO: release locks on storage
+        cleanResources(message.transactionId);
     }
 }

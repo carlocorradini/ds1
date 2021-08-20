@@ -189,7 +189,7 @@ public final class Coordinator extends Actor {
      */
     private void onReadResultCoordinatorMessage(ReadResultCoordinatorMessage message) {
         // TODO DataStore id
-        LOGGER.debug("Coordinator {} received ReadResultCoordinatorMessage: {}", id, message);
+        LOGGER.debug("Coordinator {} received from DataStore {} ReadResultCoordinatorMessage: {}", id, message.dataStoreId, message);
 
         // Obtain Client
         final ActorMetadata client = transactionIdToClient.get(message.transactionId);
@@ -241,8 +241,8 @@ public final class Coordinator extends Actor {
         final UUID transactionId = clientIdToTransactionId.get(message.clientId);
 
         // Send to affected DataStore(s) 2PC request message
-        final TwoPcVoteRequestMessage outMessage = new TwoPcVoteRequestMessage(transactionId, message.decision);
-        final Set<ActorMetadata> affectedDataStores = dataStoresAffectedInTransaction.get(transactionId);
+        final TwoPcVoteRequestMessage outMessage = new TwoPcVoteRequestMessage(id, transactionId, message.decision);
+        final Set<ActorMetadata> affectedDataStores = dataStoresAffectedInTransaction.getOrDefault(transactionId, new HashSet<>());
         affectedDataStores.forEach(dataStore -> {
             dataStore.ref.tell(outMessage, getSelf());
             LOGGER.trace("Coordinator {} send to affected DataStore {} involving transaction {} TwoPcVoteRequestMessage: {}", id, dataStore.id, transactionId, outMessage);

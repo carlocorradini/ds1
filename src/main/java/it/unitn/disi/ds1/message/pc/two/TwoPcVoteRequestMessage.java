@@ -2,6 +2,7 @@ package it.unitn.disi.ds1.message.pc.two;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.annotations.Expose;
 
 import java.io.Serializable;
 import java.util.UUID;
@@ -21,13 +22,21 @@ public final class TwoPcVoteRequestMessage extends TwoPcMessage implements Seria
             .create();
 
     /**
+     * {@link it.unitn.disi.ds1.actor.Coordinator} id.
+     */
+    @Expose
+    public final int coordinatorId;
+
+    /**
      * Construct a new TwoPcVoteRequestMessage class.
      *
+     * @param coordinatorId Coordinator id
      * @param transactionId Transaction id
      * @param decision      Decision
      */
-    public TwoPcVoteRequestMessage(UUID transactionId, TwoPcDecision decision) {
+    public TwoPcVoteRequestMessage(int coordinatorId, UUID transactionId, TwoPcDecision decision) {
         super(transactionId, decision);
+        this.coordinatorId = coordinatorId;
     }
 
     @Override

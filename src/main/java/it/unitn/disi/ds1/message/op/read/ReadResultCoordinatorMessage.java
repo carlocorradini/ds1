@@ -26,6 +26,12 @@ public final class ReadResultCoordinatorMessage extends TxnMessage implements Se
             .create();
 
     /**
+     * {@link it.unitn.disi.ds1.actor.DataStore} id.
+     */
+    @Expose
+    public final int dataStoreId;
+
+    /**
      * {@link Item} key.
      */
     @Expose
@@ -40,12 +46,14 @@ public final class ReadResultCoordinatorMessage extends TxnMessage implements Se
     /**
      * Construct a new ReadResultCoordinatorMessage class.
      *
+     * @param dataStoreId   DataStore id
      * @param transactionId Transaction id
      * @param key           Item key
      * @param value         Item value
      */
-    public ReadResultCoordinatorMessage(UUID transactionId, int key, int value) {
+    public ReadResultCoordinatorMessage(int dataStoreId, UUID transactionId, int key, int value) {
         super(transactionId);
+        this.dataStoreId = dataStoreId;
         this.key = key;
         this.value = value;
     }
