@@ -1,18 +1,18 @@
 package it.unitn.disi.ds1.etc;
 
-import akka.actor.ActorRef;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
+import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 
 import java.io.Serializable;
 
 /**
- * {@link it.unitn.disi.ds1.actor.Actor} metadata.
+ * {@link it.unitn.disi.ds1.actor.DataStore} 2PC decision.
  * It emulates a Pair.
  */
-public final class ActorMetadata implements Serializable {
-    private static final long serialVersionUID = -1491009620968209465L;
+public final class DataStoreDecision implements Serializable {
+    private static final long serialVersionUID = 5068914277834770966L;
 
     /**
      * Gson instance.
@@ -28,38 +28,38 @@ public final class ActorMetadata implements Serializable {
     public final int id;
 
     /**
-     * {@link it.unitn.disi.ds1.actor.Actor} {@link ActorRef ref}.
+     * Decision made.
      */
     @Expose
-    public final ActorRef ref;
+    public final TwoPcDecision decision;
 
     /**
-     * Construct a new ActorMetadata class.
+     * Construct a new DataStoreDecision class.
      *
-     * @param id  Actor id
-     * @param ref Actor ref
+     * @param id       DataStore id
+     * @param decision Decision
      */
-    public ActorMetadata(int id, ActorRef ref) {
+    public DataStoreDecision(int id, TwoPcDecision decision) {
         this.id = id;
-        this.ref = ref;
+        this.decision = decision;
     }
 
     /**
-     * Factory method for creating an ActorMetadata.
+     * Factory method for creating a DataStoreDecision.
      *
-     * @param id  Actor id
-     * @param ref Actor ref
-     * @return ActorMetadata instance
+     * @param id       DataStore id
+     * @param decision Decision
+     * @return DataStoreDecision instance
      */
-    public static ActorMetadata of(int id, ActorRef ref) {
-        return new ActorMetadata(id, ref);
+    public static DataStoreDecision of(int id, TwoPcDecision decision) {
+        return new DataStoreDecision(id, decision);
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        ActorMetadata that = (ActorMetadata) o;
+        DataStoreDecision that = (DataStoreDecision) o;
         return id == that.id;
     }
 
@@ -68,7 +68,7 @@ public final class ActorMetadata implements Serializable {
         final int prime = 31;
         int result = 1;
         result = prime * result + id;
-        result = prime * result + ((ref == null) ? 0 : ref.hashCode());
+        result = prime * result + ((decision == null) ? 0 : decision.hashCode());
         return result;
     }
 

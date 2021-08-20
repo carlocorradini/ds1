@@ -2,8 +2,8 @@ package it.unitn.disi.ds1.actor;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
-import akka.japi.Pair;
 import it.unitn.disi.ds1.etc.ActorMetadata;
+import it.unitn.disi.ds1.etc.DataStoreDecision;
 import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecisionMessage;
@@ -54,8 +54,10 @@ public final class Coordinator extends Actor {
      */
     private final Map<UUID, Set<ActorMetadata>> dataStoresAffectedInTransaction;
 
-    // TODO
-    private final Map<UUID, List<Pair<Integer, TwoPcDecision>>> transactionDecisions;
+    /**
+     * {@link DataStore DataStore(s)} decisions for a {@link UUID transaction}.
+     */
+    private final Map<UUID, Set<DataStoreDecision>> transactionDecisions;
 
     // --- Constructors ---
 
@@ -120,11 +122,11 @@ public final class Coordinator extends Actor {
     /**
      * Return true if all {@link DataStore} in decisions have decided to commit, otherwise false.
      *
-     * @param decisions List of DataStores decisions
+     * @param decisions DataStores decisions
      * @return True can commit, otherwise not
      */
-    private boolean canCommit(List<Pair<Integer, TwoPcDecision>> decisions) {
-        return decisions.stream().allMatch(decision -> decision.second() == TwoPcDecision.COMMIT);
+    private boolean canCommit(Set<DataStoreDecision> decisions) {
+        return decisions.stream().allMatch(decision -> decision.decision == TwoPcDecision.COMMIT);
     }
 
     // --- Message handlers --
@@ -264,9 +266,9 @@ public final class Coordinator extends Actor {
         LOGGER.debug("Coordinator {} received from DataStore {} TwoPcVoteResponseMessage: {}", id, message.dataStoreId, message);
 
         // Obtain or create DataStore(s) decisions
-        final List<Pair<Integer, TwoPcDecision>> decisions = transactionDecisions.computeIfAbsent(message.transactionId, k -> new ArrayList<>());
+        final Set<DataStoreDecision> decisions = transactionDecisions.computeIfAbsent(message.transactionId, k -> new HashSet<>());
         // Add decision of the DataStore
-        decisions.add(Pair.create(message.dataStoreId, message.decision));
+        decisions.add(DataStoreDecision.of(message.dataStoreId, message.decision));
 
         // Data stores affected in current transaction
         final Set<ActorMetadata> affectedDataStores = dataStoresAffectedInTransaction.get(message.transactionId);
