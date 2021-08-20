@@ -25,7 +25,7 @@ public final class DataStore extends Actor {
     private static final Logger LOGGER = LogManager.getLogger(DataStore.class);
 
     /**
-     * Storage used for persistency.
+     * Storage used for persistence.
      */
     private final Map<Integer, Item> storage;
 
