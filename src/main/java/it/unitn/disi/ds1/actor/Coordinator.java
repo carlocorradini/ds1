@@ -188,7 +188,6 @@ public final class Coordinator extends Actor {
      * @param message Received message
      */
     private void onReadResultCoordinatorMessage(ReadResultCoordinatorMessage message) {
-        // TODO DataStore id
         LOGGER.debug("Coordinator {} received from DataStore {} ReadResultCoordinatorMessage: {}", id, message.dataStoreId, message);
 
         // Obtain Client
