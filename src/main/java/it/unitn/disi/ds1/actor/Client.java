@@ -117,6 +117,11 @@ public final class Client extends Actor {
      */
     private Cancellable txnAcceptTimeout;
 
+    /**
+     * Flag to know if a transaction is already requested.
+     */
+    private boolean txnRequested;
+
     // --- Constructors ---
 
     /**
@@ -129,6 +134,7 @@ public final class Client extends Actor {
         this.coordinators = new ArrayList<>();
         this.txnAttempted = 0;
         this.txnCommitted = 0;
+        this.txnRequested = false;
         LOGGER.debug("Client {} initialized", id);
     }
 
@@ -159,6 +165,13 @@ public final class Client extends Actor {
      * Start a new transaction.
      */
     private void beginTxn() {
+        if (txnRequested) {
+            LOGGER.warn("Client {} already requested a transaction", id);
+            return;
+        }
+
+        txnRequested = true;
+
         // Delay between transactions from the same client
         try {
             Thread.sleep(10);
@@ -288,6 +301,7 @@ public final class Client extends Actor {
         LOGGER.debug("Client {} received TxnAcceptMessage: {}", id, message);
 
         txnAccepted = true;
+        txnRequested = false;
         txnAcceptTimeout.cancel();
 
         readTwo();
@@ -301,8 +315,9 @@ public final class Client extends Actor {
     private void onTxnAcceptTimeoutMessage(TxnAcceptTimeoutMessage message) {
         LOGGER.debug("Client {} received TxnAcceptTimeoutMessage", id);
 
-        if (!txnAccepted) {
+        if (!txnAccepted && !txnRequested) {
             LOGGER.debug("Client {} start a new transaction due to timeout", id);
+            txnRequested = false;
             beginTxn();
         }
     }
