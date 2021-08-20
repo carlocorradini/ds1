@@ -171,10 +171,10 @@ public final class DataStore extends Actor {
     private void onTwoPcRequestMessage(TwoPcRequestMessage message) {
         LOGGER.debug("DataStore {} received TwoPcRequestMessage: {}", id, message);
 
-        if (message.decision == TwoPcDecision.COMMIT) {
+        if (message.decision.toBoolean()) {
             // Inform Coordinator commit decision
             final boolean canCommit = canCommit(message.transactionId);
-            final TwoPcResponseMessage outMessage = new TwoPcResponseMessage(id, message.transactionId, canCommit ? TwoPcDecision.COMMIT : TwoPcDecision.ABORT);
+            final TwoPcResponseMessage outMessage = new TwoPcResponseMessage(id, message.transactionId, TwoPcDecision.valueOf(canCommit));
             getSender().tell(outMessage, getSender());
             LOGGER.debug("DataStore {} send TwoPcResponseMessage: {}", id, outMessage);
         } else {
@@ -193,7 +193,7 @@ public final class DataStore extends Actor {
         // Add coordinator id
         LOGGER.debug("DataStore {} received TwoPcDecisionMessage: {}", id, message);
 
-        if (message.decision == TwoPcDecision.COMMIT) {
+        if (message.decision.toBoolean()) {
             // Commit
             storage.putAll(workspaces.get(message.transactionId));
             LOGGER.info("DataStore {} successfully committed transaction {}", id, message.transactionId);

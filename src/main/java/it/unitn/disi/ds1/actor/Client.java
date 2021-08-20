@@ -10,6 +10,7 @@ import it.unitn.disi.ds1.message.*;
 import it.unitn.disi.ds1.message.op.read.ReadMessage;
 import it.unitn.disi.ds1.message.op.read.ReadResultMessage;
 import it.unitn.disi.ds1.message.op.write.WriteMessage;
+import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 import it.unitn.disi.ds1.message.txn.*;
 import it.unitn.disi.ds1.message.welcome.ClientWelcomeMessage;
 import org.apache.logging.log4j.LogManager;
@@ -198,7 +199,7 @@ public final class Client extends Actor {
      */
     private void endTxn() {
         final boolean commit = random.nextDouble() < COMMIT_PROBABILITY;
-        final TxnEndMessage outMessage = new TxnEndMessage(id, commit);
+        final TxnEndMessage outMessage = new TxnEndMessage(id, TwoPcDecision.valueOf(commit));
 
         txnCoordinator.ref.tell(outMessage, getSelf());
         txnFirstValue = null;
@@ -339,9 +340,9 @@ public final class Client extends Actor {
      * @param message Received message
      */
     private void onTxnResultMsg(TxnResultMessage message) {
-        LOGGER.debug("Client {} received TxnResultMessage with decision commit/abort {}: {}", id, message.commit, message);
+        LOGGER.debug("Client {} received TxnResultMessage with decision {}: {}", id, message.decision, message);
 
-        if (message.commit) {
+        if (message.decision.toBoolean()) {
             txnCommitted++;
             LOGGER.info("Client {} TXNs COMMIT OK ({}/{})", id, txnCommitted, txnAttempted);
         } else {
@@ -351,6 +352,7 @@ public final class Client extends Actor {
 
         LOGGER.info("End TXN by Client {}", id);
 
+        // FIXME Mettere un qualcosa all'utente per rifare comunicazioni
         //beginTxn();
     }
 

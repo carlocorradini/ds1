@@ -3,6 +3,7 @@ package it.unitn.disi.ds1.message.txn;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
+import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 
 import java.io.Serializable;
 
@@ -26,22 +27,24 @@ public final class TxnEndMessage implements Serializable {
     public final int clientId;
 
     /**
-     * Commit or Abort decision taken by client.
+     * Decision made.
      */
     @Expose
-    public final boolean commit;
+    public final TwoPcDecision decision;
 
     /**
      * Construct a new TxnEndMessage class.
      *
      * @param clientId Client id
-     * @param commit Commit or Abort decision
+     * @param decision Decision
      */
-    public TxnEndMessage(int clientId, boolean commit) {
+    public TxnEndMessage(int clientId, TwoPcDecision decision) {
         this.clientId = clientId;
-        this.commit = commit;
+        this.decision = decision;
     }
 
     @Override
-    public String toString() { return GSON.toJson(this); }
+    public String toString() {
+        return GSON.toJson(this);
+    }
 }

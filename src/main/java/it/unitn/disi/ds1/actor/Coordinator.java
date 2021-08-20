@@ -237,7 +237,7 @@ public final class Coordinator extends Actor {
         final UUID transactionId = clientIdToTransactionId.get(message.clientId);
 
         // Send to affected DataStore(s) 2PC request message
-        final TwoPcRequestMessage outMessage = new TwoPcRequestMessage(transactionId, message.commit ? TwoPcDecision.COMMIT : TwoPcDecision.ABORT);
+        final TwoPcRequestMessage outMessage = new TwoPcRequestMessage(transactionId, message.decision);
         final Set<ActorMetadata> affectedDataStores = dataStoresAffectedInTransaction.get(transactionId);
         affectedDataStores.forEach(dataStore -> {
             dataStore.ref.tell(outMessage, getSelf());
@@ -246,10 +246,10 @@ public final class Coordinator extends Actor {
         LOGGER.debug("Coordinator {} send to {} affected DataStore(s) TwoPcRequestMessage: {}", id, affectedDataStores.size(), outMessage);
 
         // If Client decided to abort, reply immediately
-        if (!message.commit) {
-            final TxnResultMessage abortMessage = new TxnResultMessage(false);
+        if (!message.decision.toBoolean()) {
+            final TxnResultMessage abortMessage = new TxnResultMessage(message.decision);
             getSender().tell(abortMessage, getSelf());
-            LOGGER.debug("Coordinator {} send to Client {} TxnResultMessage: {}", id, message.clientId, abortMessage);
+            LOGGER.debug("Coordinator {} send to Client {} due to Client abort TxnResultMessage: {}", id, message.clientId, abortMessage);
         }
     }
 
@@ -290,7 +290,7 @@ public final class Coordinator extends Actor {
             LOGGER.debug("Coordinator {} send to {} affected DataStore(s) TwoPcDecisionMessage: {}", id, affectedDataStores.size(), outMessageToDataStore);
 
             // Communicate commit decision to Client
-            final TxnResultMessage outMessageToClient = new TxnResultMessage(decision == TwoPcDecision.COMMIT);
+            final TxnResultMessage outMessageToClient = new TxnResultMessage(message.decision);
             transactionIdToClientRef.get(message.transactionId).tell(outMessageToClient, getSender());
             // TODO Client id
             LOGGER.debug("Coordinator {} send to Client TxnResultMessage: {}", id, outMessageToClient);

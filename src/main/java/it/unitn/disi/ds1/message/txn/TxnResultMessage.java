@@ -3,6 +3,7 @@ package it.unitn.disi.ds1.message.txn;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
+import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 
 import java.io.Serializable;
 
@@ -20,18 +21,18 @@ public final class TxnResultMessage implements Serializable {
             .excludeFieldsWithoutExposeAnnotation()
             .create();
     /**
-     * Resulting decision.
+     * Decision made.
      */
     @Expose
-    public final Boolean commit;
+    public final TwoPcDecision decision;
 
     /**
      * Construct a new TxnResultMessage class.
      *
-     * @param commit Txn outcome
+     * @param decision Decision
      */
-    public TxnResultMessage(boolean commit) {
-        this.commit = commit;
+    public TxnResultMessage(TwoPcDecision decision) {
+        this.decision = decision;
     }
 
     @Override
