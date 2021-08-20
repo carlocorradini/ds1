@@ -7,8 +7,8 @@ import it.unitn.disi.ds1.message.op.read.ReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.write.WriteCoordinatorMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecisionMessage;
-import it.unitn.disi.ds1.message.pc.two.TwoPcRequestMessage;
-import it.unitn.disi.ds1.message.pc.two.TwoPcResponseMessage;
+import it.unitn.disi.ds1.message.pc.two.TwoPcVoteRequestMessage;
+import it.unitn.disi.ds1.message.pc.two.TwoPcVoteResponseMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -69,7 +69,7 @@ public final class DataStore extends Actor {
         return receiveBuilder()
                 .match(ReadCoordinatorMessage.class, this::onReadCoordinatorMessage)
                 .match(WriteCoordinatorMessage.class, this::onWriteCoordinatorMessage)
-                .match(TwoPcRequestMessage.class, this::onTwoPcRequestMessage)
+                .match(TwoPcVoteRequestMessage.class, this::onTwoPcVoteRequestMessage)
                 .match(TwoPcDecisionMessage.class, this::onTwoPcDecisionMessage)
                 .build();
     }
@@ -164,19 +164,19 @@ public final class DataStore extends Actor {
     }
 
     /**
-     * Callback for {@link TwoPcRequestMessage} message.
+     * Callback for {@link TwoPcVoteRequestMessage} message.
      *
      * @param message Received message
      */
-    private void onTwoPcRequestMessage(TwoPcRequestMessage message) {
-        LOGGER.debug("DataStore {} received TwoPcRequestMessage: {}", id, message);
+    private void onTwoPcVoteRequestMessage(TwoPcVoteRequestMessage message) {
+        LOGGER.debug("DataStore {} received TwoPcVoteRequestMessage: {}", id, message);
 
         if (message.decision == TwoPcDecision.COMMIT) {
             // Inform Coordinator commit decision
             final boolean canCommit = canCommit(message.transactionId);
-            final TwoPcResponseMessage outMessage = new TwoPcResponseMessage(id, message.transactionId, TwoPcDecision.valueOf(canCommit));
+            final TwoPcVoteResponseMessage outMessage = new TwoPcVoteResponseMessage(id, message.transactionId, TwoPcDecision.valueOf(canCommit));
             getSender().tell(outMessage, getSender());
-            LOGGER.debug("DataStore {} send TwoPcResponseMessage: {}", id, outMessage);
+            LOGGER.debug("DataStore {} send TwoPcVoteResponseMessage: {}", id, outMessage);
         } else {
             // Delete workspace due to Client aborted transaction
             workspaces.remove(message.transactionId);

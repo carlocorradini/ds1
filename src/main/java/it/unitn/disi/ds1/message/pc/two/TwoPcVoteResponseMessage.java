@@ -11,7 +11,7 @@ import java.util.UUID;
  * Reply from {@link it.unitn.disi.ds1.actor.DataStore} to {@link it.unitn.disi.ds1.actor.Coordinator}
  * with Yes or No decision for committing
  */
-public final class TwoPcResponseMessage extends TwoPcMessage implements Serializable {
+public final class TwoPcVoteResponseMessage extends TwoPcMessage implements Serializable {
     private static final long serialVersionUID = 4917833122149828262L;
 
     /**
@@ -28,13 +28,13 @@ public final class TwoPcResponseMessage extends TwoPcMessage implements Serializ
     public final int dataStoreId;
 
     /**
-     * Construct a new ResponseMessage class.
+     * Construct a new TwoPcVoteResponseMessage class.
      *
      * @param dataStoreId   DataStore id
      * @param transactionId Transaction id
      * @param decision      Decision
      */
-    public TwoPcResponseMessage(int dataStoreId, UUID transactionId, TwoPcDecision decision) {
+    public TwoPcVoteResponseMessage(int dataStoreId, UUID transactionId, TwoPcDecision decision) {
         super(transactionId, decision);
         this.dataStoreId = dataStoreId;
     }

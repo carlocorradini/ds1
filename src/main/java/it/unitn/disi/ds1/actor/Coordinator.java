@@ -7,7 +7,7 @@ import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecisionMessage;
-import it.unitn.disi.ds1.message.pc.two.TwoPcResponseMessage;
+import it.unitn.disi.ds1.message.pc.two.TwoPcVoteResponseMessage;
 import it.unitn.disi.ds1.message.txn.TxnEndMessage;
 import it.unitn.disi.ds1.message.txn.TxnResultMessage;
 import it.unitn.disi.ds1.message.op.read.ReadResultMessage;
@@ -16,7 +16,7 @@ import it.unitn.disi.ds1.message.op.read.ReadMessage;
 import it.unitn.disi.ds1.message.op.read.ReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.write.WriteCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.write.WriteMessage;
-import it.unitn.disi.ds1.message.pc.two.TwoPcRequestMessage;
+import it.unitn.disi.ds1.message.pc.two.TwoPcVoteRequestMessage;
 import it.unitn.disi.ds1.message.txn.TxnAcceptMessage;
 import it.unitn.disi.ds1.message.txn.TxnBeginMessage;
 import it.unitn.disi.ds1.message.welcome.CoordinatorWelcomeMessage;
@@ -92,7 +92,7 @@ public final class Coordinator extends Actor {
                 .match(ReadResultCoordinatorMessage.class, this::onReadResultCoordinatorMessage)
                 .match(WriteMessage.class, this::onWriteMessage)
                 .match(TxnEndMessage.class, this::onTxnEndMessage)
-                .match(TwoPcResponseMessage.class, this::onTwoPcResponseMessage)
+                .match(TwoPcVoteResponseMessage.class, this::onTwoPcVoteResponseMessage)
                 .build();
     }
 
@@ -237,13 +237,13 @@ public final class Coordinator extends Actor {
         final UUID transactionId = clientIdToTransactionId.get(message.clientId);
 
         // Send to affected DataStore(s) 2PC request message
-        final TwoPcRequestMessage outMessage = new TwoPcRequestMessage(transactionId, message.decision);
+        final TwoPcVoteRequestMessage outMessage = new TwoPcVoteRequestMessage(transactionId, message.decision);
         final Set<ActorMetadata> affectedDataStores = dataStoresAffectedInTransaction.get(transactionId);
         affectedDataStores.forEach(dataStore -> {
             dataStore.ref.tell(outMessage, getSelf());
-            LOGGER.trace("Coordinator {} send to affected DataStore {} involving transaction {} TwoPcRequestMessage: {}", id, dataStore.id, transactionId, outMessage);
+            LOGGER.trace("Coordinator {} send to affected DataStore {} involving transaction {} TwoPcVoteRequestMessage: {}", id, dataStore.id, transactionId, outMessage);
         });
-        LOGGER.debug("Coordinator {} send to {} affected DataStore(s) TwoPcRequestMessage: {}", id, affectedDataStores.size(), outMessage);
+        LOGGER.debug("Coordinator {} send to {} affected DataStore(s) TwoPcVoteRequestMessage: {}", id, affectedDataStores.size(), outMessage);
 
         // If Client decided to abort, reply immediately
         if (message.decision == TwoPcDecision.ABORT) {
@@ -254,12 +254,12 @@ public final class Coordinator extends Actor {
     }
 
     /**
-     * Callback for {@link TwoPcResponseMessage} message.
+     * Callback for {@link TwoPcVoteResponseMessage} message.
      *
      * @param message Received message
      */
-    private void onTwoPcResponseMessage(TwoPcResponseMessage message) {
-        LOGGER.debug("Coordinator {} received from DataStore {} TwoPcResponseMessage: {}", id, message.dataStoreId, message);
+    private void onTwoPcVoteResponseMessage(TwoPcVoteResponseMessage message) {
+        LOGGER.debug("Coordinator {} received from DataStore {} TwoPcVoteResponseMessage: {}", id, message.dataStoreId, message);
 
         // Obtain or create DataStore(s) decisions
         final List<Pair<Integer, TwoPcDecision>> decisions = transactionDecisions.computeIfAbsent(message.transactionId, k -> new ArrayList<>());

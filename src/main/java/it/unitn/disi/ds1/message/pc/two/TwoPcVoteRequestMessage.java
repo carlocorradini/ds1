@@ -10,7 +10,7 @@ import java.util.UUID;
  * Message from {@link it.unitn.disi.ds1.actor.Coordinator} to {@link it.unitn.disi.ds1.actor.DataStore}
  * asking if {@link it.unitn.disi.ds1.actor.DataStore} is able to commit or not
  */
-public final class TwoPcRequestMessage extends TwoPcMessage implements Serializable {
+public final class TwoPcVoteRequestMessage extends TwoPcMessage implements Serializable {
     private static final long serialVersionUID = 6797846417399441318L;
 
     /**
@@ -21,12 +21,12 @@ public final class TwoPcRequestMessage extends TwoPcMessage implements Serializa
             .create();
 
     /**
-     * Construct a new RequestMessage class.
+     * Construct a new TwoPcVoteRequestMessage class.
      *
      * @param transactionId Transaction id
      * @param decision      Decision
      */
-    public TwoPcRequestMessage(UUID transactionId, TwoPcDecision decision) {
+    public TwoPcVoteRequestMessage(UUID transactionId, TwoPcDecision decision) {
         super(transactionId, decision);
     }
 
