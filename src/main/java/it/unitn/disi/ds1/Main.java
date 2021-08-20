@@ -8,6 +8,7 @@ import it.unitn.disi.ds1.actor.DataStore;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.message.welcome.ClientWelcomeMessage;
 import it.unitn.disi.ds1.message.welcome.CoordinatorWelcomeMessage;
+import it.unitn.disi.ds1.message.welcome.DataStoreWelcomeMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -62,6 +63,9 @@ public final class Main {
         IntStream.range(0, N_CLIENTS).forEach(id -> clients.add(ActorMetadata.of(id, system.actorOf(Client.props(id)))));
 
         // --- Welcome ---
+        // DataStores
+        final DataStoreWelcomeMessage dataStoreWelcomeMessage = new DataStoreWelcomeMessage(dataStores);
+        dataStores.forEach(dataStore -> dataStore.ref.tell(dataStoreWelcomeMessage, ActorRef.noSender()));
         // Coordinators
         final CoordinatorWelcomeMessage coordinatorWelcomeMessage = new CoordinatorWelcomeMessage(dataStores);
         coordinators.forEach(coordinator -> coordinator.ref.tell(coordinatorWelcomeMessage, ActorRef.noSender()));

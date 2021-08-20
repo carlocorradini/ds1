@@ -1,6 +1,7 @@
 package it.unitn.disi.ds1.actor;
 
 import akka.actor.Props;
+import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.message.op.read.ReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.read.ReadResultCoordinatorMessage;
@@ -9,10 +10,12 @@ import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecisionMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcVoteRequestMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcVoteResponseMessage;
+import it.unitn.disi.ds1.message.welcome.DataStoreWelcomeMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
@@ -23,6 +26,11 @@ public final class DataStore extends Actor {
      * Logger.
      */
     private static final Logger LOGGER = LogManager.getLogger(DataStore.class);
+
+    /**
+     * {@link DataStore DataStore(s)} metadata.
+     */
+    private final List<ActorMetadata> dataStores;
 
     /**
      * Storage used for persistence.
@@ -45,6 +53,7 @@ public final class DataStore extends Actor {
      */
     public DataStore(int id) {
         super(id);
+        this.dataStores = new ArrayList<>();
         this.storage = new HashMap<>();
         this.workspaces = new HashMap<>();
 
@@ -67,6 +76,7 @@ public final class DataStore extends Actor {
     @Override
     public Receive createReceive() {
         return receiveBuilder()
+                .match(DataStoreWelcomeMessage.class, this::onDataStoreWelcomeMessage)
                 .match(ReadCoordinatorMessage.class, this::onReadCoordinatorMessage)
                 .match(WriteCoordinatorMessage.class, this::onWriteCoordinatorMessage)
                 .match(TwoPcVoteRequestMessage.class, this::onTwoPcVoteRequestMessage)
@@ -165,6 +175,19 @@ public final class DataStore extends Actor {
     }
 
     // --- Message handlers ---
+
+    /**
+     * Callback for {@link DataStoreWelcomeMessage} message.
+     *
+     * @param message Received message.
+     */
+    private void onDataStoreWelcomeMessage(DataStoreWelcomeMessage message) {
+        LOGGER.debug("Coordinator {} received CoordinatorWelcomeMessage: {}", id, message);
+
+        dataStores.clear();
+        dataStores
+                .addAll(message.dataStores.stream().filter(dataStore -> dataStore.id != id).collect(Collectors.toCollection(ArrayList::new)));
+    }
 
     /**
      * Callback for {@link ReadCoordinatorMessage} message.
