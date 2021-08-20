@@ -21,7 +21,7 @@ public final class Main {
     /**
      * Number of {@link DataStore Data Store(s)}.
      */
-    private final static int N_DATA_STORES = 1;
+    private final static int N_DATA_STORES = 3;
 
     /**
      * Number of {@link Coordinator Coordinator(s)}.

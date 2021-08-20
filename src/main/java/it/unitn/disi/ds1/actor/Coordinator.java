@@ -40,16 +40,18 @@ public final class Coordinator extends Actor {
     private final List<ActorMetadata> dataStores;
 
     /**
-     * Mapping from {@link UUID transaction Id} to {@link ActorRef client ref}.
+     * Mapping from {@link UUID transaction Id} to {@link ActorMetadata client metadata}.
      */
-    private final Map<UUID, ActorRef> transactionIdToClientRef;
+    private final Map<UUID, ActorMetadata> transactionIdToClient;
 
     /**
      * Mapping from {@link Integer client id} to {@link UUID transaction id}.
      */
     private final Map<Integer, UUID> clientIdToTransactionId;
 
-    // TODO
+    /**
+     * {@link DataStore DataStore(s)} affected in a {@link UUID transaction}.
+     */
     private final Map<UUID, Set<ActorMetadata>> dataStoresAffectedInTransaction;
 
     // TODO
@@ -65,7 +67,7 @@ public final class Coordinator extends Actor {
     public Coordinator(int id) {
         super(id);
         this.dataStores = new ArrayList<>();
-        this.transactionIdToClientRef = new HashMap<>();
+        this.transactionIdToClient = new HashMap<>();
         this.clientIdToTransactionId = new HashMap<>();
         this.dataStoresAffectedInTransaction = new HashMap<>();
         this.transactionDecisions = new HashMap<>();
@@ -150,7 +152,7 @@ public final class Coordinator extends Actor {
         // Generate a transaction id and store all relevant data
         final UUID transactionId = UUID.randomUUID();
         clientIdToTransactionId.put(message.clientId, transactionId);
-        transactionIdToClientRef.put(transactionId, getSender());
+        transactionIdToClient.put(transactionId, ActorMetadata.of(message.clientId, getSender()));
 
         // Inform Client that the transaction has been accepted
         final TxnAcceptMessage outMessage = new TxnAcceptMessage();
@@ -184,16 +186,16 @@ public final class Coordinator extends Actor {
      * @param message Received message
      */
     private void onReadResultCoordinatorMessage(ReadResultCoordinatorMessage message) {
+        // TODO DataStore id
         LOGGER.debug("Coordinator {} received ReadResultCoordinatorMessage: {}", id, message);
 
-        // Obtain Client ref
-        final ActorRef clientRef = transactionIdToClientRef.get(message.transactionId);
+        // Obtain Client
+        final ActorMetadata client = transactionIdToClient.get(message.transactionId);
 
         // Send to Client Item read reply message
         final ReadResultMessage outMessage = new ReadResultMessage(message.key, message.value);
-        clientRef.tell(outMessage, getSelf());
-        // TODO Client id
-        LOGGER.debug("Coordinator {} send ReadResultMessage: {}", id, outMessage);
+        client.ref.tell(outMessage, getSelf());
+        LOGGER.debug("Coordinator {} send to Client {} ReadResultMessage: {}", id, client.id, outMessage);
     }
 
     /**
@@ -212,7 +214,7 @@ public final class Coordinator extends Actor {
 
         // Add DataStore to the affected for the current transaction
         final Set<ActorMetadata> dataStoresAffected = dataStoresAffectedInTransaction.computeIfAbsent(transactionId, k -> new HashSet<>());
-        if (dataStoresAffected.isEmpty()) {
+        if (!dataStoresAffected.contains(dataStore)) {
             dataStoresAffected.add(dataStore);
             LOGGER.trace("Coordinator {} add DataStore {} to affected DataStore(s) for transaction {}", id, dataStore.id, transactionId);
         } else {
@@ -290,17 +292,17 @@ public final class Coordinator extends Actor {
             LOGGER.debug("Coordinator {} send to {} affected DataStore(s) TwoPcDecisionMessage: {}", id, affectedDataStores.size(), outMessageToDataStore);
 
             // Communicate commit decision to Client
+            final ActorMetadata client = transactionIdToClient.get(message.transactionId);
             final TxnResultMessage outMessageToClient = new TxnResultMessage(message.decision);
-            transactionIdToClientRef.get(message.transactionId).tell(outMessageToClient, getSender());
-            // TODO Client id
-            LOGGER.debug("Coordinator {} send to Client TxnResultMessage: {}", id, outMessageToClient);
+            client.ref.tell(outMessageToClient, getSender());
+            LOGGER.debug("Coordinator {} send to Client {} TxnResultMessage: {}", id, client.id, outMessageToClient);
 
             // Clean resources
-            transactionIdToClientRef.remove(message.transactionId);
+            transactionIdToClient.remove(message.transactionId);
             clientIdToTransactionId.values().remove(message.transactionId);
             dataStoresAffectedInTransaction.remove(message.transactionId);
             transactionDecisions.remove(message.transactionId);
-            LOGGER.trace("Coordinator {} clean resources involving transaction {}", id, message.transactionId);
+            LOGGER.trace("Coordinator {} clean resources involving client {} in transaction {}", id, client.id, message.transactionId);
         }
     }
 }
