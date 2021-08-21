@@ -25,6 +25,12 @@ public final class ReadCoordinatorMessage extends TxnMessage implements Serializ
             .create();
 
     /**
+     * Coordinator id.
+     */
+    @Expose
+    public final int coordinatorId;
+
+    /**
      * {@link Item} key to read.
      */
     @Expose
@@ -33,11 +39,13 @@ public final class ReadCoordinatorMessage extends TxnMessage implements Serializ
     /**
      * Construct a new ReadCoordinatorMessage class.
      *
+     * @param coordinatorId Coordinator id
      * @param transactionId Transaction id
      * @param key           Item key to read
      */
-    public ReadCoordinatorMessage(UUID transactionId, int key) {
+    public ReadCoordinatorMessage(int coordinatorId, UUID transactionId, int key) {
         super(transactionId);
+        this.coordinatorId = coordinatorId;
         this.key = key;
     }
 

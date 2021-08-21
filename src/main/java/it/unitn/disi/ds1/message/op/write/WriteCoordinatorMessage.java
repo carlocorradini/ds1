@@ -25,6 +25,12 @@ public final class WriteCoordinatorMessage extends TxnMessage implements Seriali
             .create();
 
     /**
+     * Coordinator id.
+     */
+    @Expose
+    public final int coordinatorId;
+
+    /**
      * {@link Item} key to write.
      */
     @Expose
@@ -39,12 +45,14 @@ public final class WriteCoordinatorMessage extends TxnMessage implements Seriali
     /**
      * Construct a new WriteCoordinatorMessage class.
      *
+     * @param coordinatorId Coordinator id
      * @param transactionId Transaction id
      * @param key           Item key to write
      * @param value         Item new value to write
      */
-    public WriteCoordinatorMessage(UUID transactionId, int key, int value) {
+    public WriteCoordinatorMessage(int coordinatorId, UUID transactionId, int key, int value) {
         super(transactionId);
+        this.coordinatorId = coordinatorId;
         this.key = key;
         this.value = value;
     }

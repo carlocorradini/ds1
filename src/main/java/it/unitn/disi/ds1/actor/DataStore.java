@@ -195,7 +195,7 @@ public final class DataStore extends Actor {
      * @param message Received message
      */
     private void onReadCoordinatorMessage(ReadCoordinatorMessage message) {
-        LOGGER.debug("DataStore {} received ReadCoordinatorMessage: {}", id, message);
+        LOGGER.debug("DataStore {} received from Coordinator {} ReadCoordinatorMessage: {}", id, message.coordinatorId, message);
 
         final Item item;
 
@@ -223,7 +223,7 @@ public final class DataStore extends Actor {
      * @param message Received message
      */
     private void onWriteCoordinatorMessage(WriteCoordinatorMessage message) {
-        LOGGER.debug("DataStore {} received WriteCoordinatorMessage: {}", id, message);
+        LOGGER.debug("DataStore {} received from Coordinator {} WriteCoordinatorMessage: {}", id, message.coordinatorId, message);
 
         // Obtain private workspace, otherwise create
         final Map<Integer, Item> workspace = workspaces.computeIfAbsent(message.transactionId, k -> new HashMap<>());
@@ -245,7 +245,7 @@ public final class DataStore extends Actor {
      * @param message Received message
      */
     private void onTwoPcVoteRequestMessage(TwoPcVoteRequestMessage message) {
-        LOGGER.debug("DataStore {} received TwoPcVoteRequestMessage: {}", id, message);
+        LOGGER.debug("DataStore {} received from Coordinator {} TwoPcVoteRequestMessage: {}", id, message.coordinatorId, message);
 
         // Check client decision
         switch (message.decision) {

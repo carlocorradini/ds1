@@ -174,7 +174,7 @@ public final class Coordinator extends Actor {
         // Inform Client that the transaction has been accepted
         final TxnAcceptMessage outMessage = new TxnAcceptMessage();
         getSender().tell(outMessage, getSelf());
-        LOGGER.debug("Coordinator {} send to Client {} TxnAcceptMessage: {}", id, message.clientId, outMessage);
+        LOGGER.debug("Coordinator {} send to Client {} involving transaction transactionId {} TxnAcceptMessage: {}", id, message.clientId, transactionId, outMessage);
     }
 
     /**
@@ -192,7 +192,7 @@ public final class Coordinator extends Actor {
         final UUID transactionId = clientIdToTransactionId.get(message.clientId);
 
         // Send to DataStore Item read message
-        final ReadCoordinatorMessage outMessage = new ReadCoordinatorMessage(transactionId, message.key);
+        final ReadCoordinatorMessage outMessage = new ReadCoordinatorMessage(id, transactionId, message.key);
         dataStore.ref.tell(outMessage, getSelf());
         LOGGER.debug("Coordinator {} send to DataStore {} ReadCoordinatorMessage: {}", id, dataStore.id, outMessage);
     }
@@ -220,7 +220,7 @@ public final class Coordinator extends Actor {
      * @param message Received message
      */
     private void onWriteMessage(WriteMessage message) {
-        LOGGER.debug("Coordinator {} received WriteMessage: {}", id, message);
+        LOGGER.debug("Coordinator {} received from Client {} WriteMessage: {}", id, message.clientId, message);
 
         // Obtain correct DataStore
         final ActorMetadata dataStore = dataStoreMetadataByItemKey(message.key);
@@ -238,7 +238,7 @@ public final class Coordinator extends Actor {
         }
 
         // Send to DataStore Item write message
-        final WriteCoordinatorMessage outMessage = new WriteCoordinatorMessage(transactionId, message.key, message.value);
+        final WriteCoordinatorMessage outMessage = new WriteCoordinatorMessage(id, transactionId, message.key, message.value);
         dataStore.ref.tell(outMessage, getSelf());
         LOGGER.debug("Coordinator {} send to DataStore {} WriteCoordinatorMessage: {}", id, dataStore.id, outMessage);
     }
