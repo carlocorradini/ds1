@@ -331,6 +331,7 @@ public final class Coordinator extends Actor {
                     LOGGER.debug("Coordinator {} send to {} affected DataStore(s) if can COMMIT transaction {} TwoPcVoteRequestMessage: {}", id, affectedDataStores.size(), transactionId, outMessage);
                 } else {
                     // No DataStore(s) affected
+                    LOGGER.warn("Coordinator {} no DataStore(s) are affected in transaction {}", id, transactionId);
                     terminateTransaction(transactionId, TwoPcDecision.COMMIT);
                 }
                 break;

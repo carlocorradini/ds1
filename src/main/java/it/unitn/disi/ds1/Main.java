@@ -33,7 +33,7 @@ public final class Main {
     /**
      * Number of {@link Client Client(s)}.
      */
-    private final static int N_CLIENTS = 32;
+    private final static int N_CLIENTS = 128;
 
     /**
      * Maximum item key index value.
@@ -86,7 +86,7 @@ public final class Main {
             scanner.nextLine();
 
             // Verify storage ?
-            System.out.print("--- VERIFY STORAGE [Y|N]? ");
+            System.out.println("--- VERIFY STORAGE [Y|N]? ");
             final boolean verifyStorage = scanner.nextLine().matches("(?i)^(?:y(?:es)?|1)$");
             if (verifyStorage) {
                 coordinators
