@@ -306,14 +306,13 @@ public final class Coordinator extends Actor {
         // Obtain transaction id
         final UUID transactionId = clientIdToTransactionId.get(message.clientId);
 
-        // Send to affected DataStore(s) 2PC request message
-        final Set<ActorMetadata> affectedDataStores = dataStoresAffectedInTransaction.getOrDefault(transactionId, new HashSet<>());
-
         // Check Client decision
         switch (message.decision) {
             case COMMIT: {
                 // Client decided to commit
                 LOGGER.info("Coordinator {} informed that Client {} want to COMMIT transaction {}", id, message.clientId, transactionId);
+                // Obtain affected DataStore(s) in transaction
+                final Set<ActorMetadata> affectedDataStores = dataStoresAffectedInTransaction.getOrDefault(transactionId, new HashSet<>());
                 // Check if there is at least one affected DataStore due to a write request
                 if (!affectedDataStores.isEmpty()) {
                     // DataStore(s) affected
