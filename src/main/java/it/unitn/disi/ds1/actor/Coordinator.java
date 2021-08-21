@@ -249,7 +249,7 @@ public final class Coordinator extends Actor {
      * @param message Received message
      */
     private void onTxnEndMessage(TxnEndMessage message) {
-        LOGGER.debug("Coordinator {} received TxnEndMessage {}", id, message);
+        LOGGER.debug("Coordinator {} received from Client {} TxnEndMessage {}", id, message.clientId, message);
 
         // Obtain transaction id
         final UUID transactionId = clientIdToTransactionId.get(message.clientId);
