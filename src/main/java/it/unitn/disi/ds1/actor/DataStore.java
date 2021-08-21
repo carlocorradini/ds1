@@ -1,8 +1,11 @@
 package it.unitn.disi.ds1.actor;
 
 import akka.actor.Props;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.Item;
+import it.unitn.disi.ds1.exception.TransactionIsRunningException;
 import it.unitn.disi.ds1.message.op.read.ReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.read.ReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.write.WriteCoordinatorMessage;
@@ -28,6 +31,14 @@ public final class DataStore extends Actor {
      * Logger.
      */
     private static final Logger LOGGER = LogManager.getLogger(DataStore.class);
+
+    /**
+     * Gson instance.
+     */
+    private static final Gson GSON = new GsonBuilder()
+            .excludeFieldsWithoutExposeAnnotation()
+            .serializeNulls()
+            .create();
 
     /**
      * {@link DataStore DataStore(s)} metadata.
@@ -124,7 +135,8 @@ public final class DataStore extends Actor {
     private synchronized boolean checkItemsVersion(UUID transactionId) {
         // Obtain private workspace of the transaction
         final Map<Integer, Item> workspace = workspaces.get(transactionId);
-        if (workspace == null) return false;
+        if (workspace == null)
+            throw new NullPointerException(String.format("DataStore %d is unable to obtain workspace for transaction %s during checkItemsVersion", id, transactionId));
 
         return workspace.entrySet().stream().allMatch((entry) -> {
             final Item itemInWorkSpace = entry.getValue();
@@ -143,7 +155,8 @@ public final class DataStore extends Actor {
     private synchronized boolean lockItems(UUID transactionId) {
         // Obtain private workspace of the transaction
         final Map<Integer, Item> workspace = workspaces.get(transactionId);
-        if (workspace == null) return false;
+        if (workspace == null)
+            throw new NullPointerException(String.format("DataStore %d is unable to obtain workspace for transaction %s during lockItems", id, transactionId));
 
         // Try to lock all Item(s) in storage involved in transaction
         final boolean locked = workspace.entrySet().stream()
@@ -163,7 +176,8 @@ public final class DataStore extends Actor {
     private synchronized void cleanLockItems(UUID transactionId) {
         // Obtain private workspace of the transaction
         final Map<Integer, Item> workspace = workspaces.get(transactionId);
-        if (workspace == null) return;
+        if (workspace == null)
+            throw new NullPointerException(String.format("DataStore %d is unable to obtain workspace for transaction %s during cleanLockItems", id, transactionId));
 
         workspace.forEach((key, value) -> storage.get(key).unlockIfIsLocker(transactionId));
     }
@@ -263,18 +277,13 @@ public final class DataStore extends Actor {
             case COMMIT: {
                 // Check if transaction can commit
                 canCommit = canCommit(message.transactionId);
-                LOGGER.debug("DataStore {} received COMMIT from Coordinator {} and decision is {}", id, message.coordinatorId, TwoPcDecision.valueOf(canCommit));
+                LOGGER.debug("DataStore {} received COMMIT decision from Coordinator {} involving transaction {} and decision is {}", id, message.coordinatorId, message.transactionId, TwoPcDecision.valueOf(canCommit));
                 break;
             }
-            case ABORT: {
-                canCommit = false;
-                LOGGER.debug("DataStore {} received ABORT from Coordinator {}", id, message.transactionId);
-                break;
-            }
+            case ABORT:
+                throw new IllegalStateException(String.format("DataStore %d received ABORT decision from Coordinator %d involving transaction %s", id, message.coordinatorId, message.transactionId));
             default:
-                canCommit = false;
-                LOGGER.warn("DataStore {} received UNKNOWN decision from Coordinator {}", id, message.transactionId);
-                break;
+                throw new IllegalStateException(String.format("DataStore %d received UNKNOWN decision from Coordinator %d involving transaction %s", id, message.coordinatorId, message.transactionId));
         }
 
         // Send response to Coordinator
@@ -289,15 +298,19 @@ public final class DataStore extends Actor {
      * @param message Received message
      */
     private void onTwoPcDecisionMessage(TwoPcDecisionMessage message) {
-        LOGGER.debug("DataStore {} received from Coordinator {} TwoPcDecisionMessage: {}", id, message.coordinatorId, message);
+        LOGGER.debug("DataStore {} received from Coordinator {} to {} TwoPcDecisionMessage: {}", id, message.coordinatorId, message.decision, message);
 
         // If decision is to commit, let's commit
         if (message.decision == TwoPcDecision.COMMIT) {
-            synchronized (storage) {
+            synchronized (this) {
+                // Obtain private workspace of the transaction
+                final Map<Integer, Item> workspace = workspaces.get(message.transactionId);
+                if (workspace == null)
+                    throw new NullPointerException(String.format("DataStore %d is unable to obtain workspace for transaction %s during onTwoPcDecisionMessage", id, message.transactionId));
                 // Commit
                 storage.putAll(workspaces.get(message.transactionId));
+                LOGGER.info("DataStore {} successfully committed transaction {}: {}", id, message.transactionId, GSON.toJson(workspace));
             }
-            LOGGER.info("DataStore {} successfully committed transaction {}", id, message.transactionId);
         }
 
         // Clean resources
@@ -309,32 +322,17 @@ public final class DataStore extends Actor {
      *
      * @param message Received message
      */
-    private void onSnapshotTokenMessage(SnapshotTokenMessage message) {
+    private void onSnapshotTokenMessage(SnapshotTokenMessage message) throws TransactionIsRunningException {
         LOGGER.debug("DataStore {} received from Coordinator {} SnapshotTokenMessage: {}", id, message.coordinatorId, message);
         LOGGER.trace("DataStore {} generating snapshot {} of storage: {}", id, message.snapshotId, storage);
+
+        // Check if there are transaction running
+        if (!workspaces.isEmpty())
+            throw new TransactionIsRunningException(String.format("DataStore %d is unable to create snapshot %d since there are %d transaction(s) running", id, message.snapshotId, workspaces.size()));
 
         // Send response to Coordinator
         final SnapshotTokenResultMessage outMessage = new SnapshotTokenResultMessage(id, message.snapshotId, storage);
         getSender().tell(outMessage, getSelf());
         LOGGER.debug("DataStore {} send to Coordinator {} SnapshotTokenResultMessage: {}", id, message.coordinatorId, outMessage);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        DataStore that = (DataStore) o;
-        return this.id == that.id;
-    }
-
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + id;
-        result = prime * result + (storage != null ? storage.hashCode() : 0);
-        result = prime * result + (workspaces != null ? workspaces.hashCode() : 0);
-        result = prime * result + (dataStores != null ? dataStores.hashCode() : 0);
-        return result;
     }
 }

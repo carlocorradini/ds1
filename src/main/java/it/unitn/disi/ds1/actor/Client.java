@@ -208,21 +208,6 @@ public final class Client extends Actor {
     }
 
     /**
-     * End transaction.
-     */
-    private void endTxn() {
-        final boolean commit = random.nextDouble() < COMMIT_PROBABILITY;
-        final TxnEndMessage outMessage = new TxnEndMessage(id, TwoPcDecision.valueOf(commit));
-
-        txnCoordinator.ref.tell(outMessage, getSelf());
-        txnFirstValue = null;
-        txnSecondValue = null;
-
-        LOGGER.debug("Client {} send to Coordinator {} TxnEndMessage: {}", id, txnCoordinator.id, outMessage);
-        LOGGER.info("Client {} END transaction", id);
-    }
-
-    /**
      * Read two {@link Item items}.
      */
     private void readTwo() {
@@ -272,6 +257,21 @@ public final class Client extends Actor {
         LOGGER.info("Client {} WRITE #{} taken {} ({}, {}), ({}, {})", id, txnOpDone, amount, txnFirstKey, newFirstValue, txnSecondKey, newSecondValue);
     }
 
+    /**
+     * End transaction.
+     */
+    private void endTxn() {
+        final boolean commit = random.nextDouble() < COMMIT_PROBABILITY;
+        final TxnEndMessage outMessage = new TxnEndMessage(id, TwoPcDecision.valueOf(commit));
+
+        txnCoordinator.ref.tell(outMessage, getSelf());
+        txnFirstValue = null;
+        txnSecondValue = null;
+
+        LOGGER.debug("Client {} send to Coordinator {} TxnEndMessage: {}", id, txnCoordinator.id, outMessage);
+        LOGGER.info("Client {} END transaction", id);
+    }
+
     // --- Message handlers ---
 
     /**
@@ -313,12 +313,14 @@ public final class Client extends Actor {
      * @param message Received message
      */
     private void onTxnAcceptTimeoutMessage(TxnAcceptTimeoutMessage message) {
-        LOGGER.debug("Client {} received TxnAcceptTimeoutMessage", id);
+        LOGGER.debug("Client {} received TxnAcceptTimeoutMessage: {}", id, message);
 
         if (!txnAccepted && !txnRequested) {
             LOGGER.debug("Client {} start a new transaction due to timeout", id);
             txnRequested = false;
             beginTxn();
+        } else {
+            LOGGER.warn("Client {} ignoring timeout since there is a transaction request running", id);
         }
     }
 

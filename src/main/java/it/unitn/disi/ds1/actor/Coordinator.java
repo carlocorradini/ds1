@@ -1,11 +1,12 @@
 package it.unitn.disi.ds1.actor;
 
-import akka.actor.ActorRef;
 import akka.actor.Props;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.DataStoreDecision;
 import it.unitn.disi.ds1.etc.Item;
+import it.unitn.disi.ds1.exception.TransactionIsRunningException;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecisionMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcVoteResponseMessage;
@@ -39,9 +40,12 @@ public final class Coordinator extends Actor {
     private static final Logger LOGGER = LogManager.getLogger(Coordinator.class);
 
     /**
-     * Invalid {@link DataStore} id used when a {@link UUID transaction} have not affected any {@link DataStore DataStore(s)}.
+     * Gson instance.
      */
-    private static final int NO_DATA_STORE_AFFECTED_ID = -1;
+    private static final Gson GSON = new GsonBuilder()
+            .excludeFieldsWithoutExposeAnnotation()
+            .serializeNulls()
+            .create();
 
     /**
      * {@link DataStore DataStore(s)} metadata.
@@ -120,20 +124,17 @@ public final class Coordinator extends Actor {
     // --- Methods ---
 
     /**
-     * Return {@link DataStore} {@link ActorRef} by {@link Item} key.
+     * Return {@link DataStore} {@link ActorMetadata} by {@link Item} key.
      *
      * @param key Item key
      * @return DataStore actorRef
      */
-    private ActorMetadata dataStoreMetadataByItemKey(int key) {
-        final ActorMetadata dataStore = dataStores.get(key / 10);
-
-        if (dataStore == null) {
-            LOGGER.error("Coordinator {} is unable to find Data Store by Item key {}", id, key);
-            getContext().system().terminate();
-        }
-
-        return dataStore;
+    private ActorMetadata dataStoreByItemKey(int key) {
+        final int dataStoreId = key / 10;
+        return dataStores.stream()
+                .filter(dataStore -> dataStore.id == dataStoreId)
+                .findFirst()
+                .orElseThrow(() -> new NullPointerException(String.format("Coordinator %d is unable to obtain DataStore %d via Item key %d", id, dataStoreId, key)));
     }
 
     /**
@@ -143,7 +144,36 @@ public final class Coordinator extends Actor {
      * @return True can commit, otherwise not
      */
     private boolean canCommit(Set<DataStoreDecision> decisions) {
-        return decisions.stream().allMatch(decision -> decision.decision == TwoPcDecision.COMMIT);
+        return decisions.stream()
+                .allMatch(decision -> decision.decision == TwoPcDecision.COMMIT);
+    }
+
+    /**
+     * Terminate the {@link UUID transaction} with the chosen decision.
+     *
+     * @param transactionId {@link UUID Transaction} id
+     * @param decision      Final {@link TwoPcDecision decision}
+     */
+    private void terminateTransaction(UUID transactionId, TwoPcDecision decision) {
+        // Data stores affected in current transaction
+        final Set<ActorMetadata> affectedDataStores = dataStoresAffectedInTransaction.getOrDefault(transactionId, new HashSet<>());
+
+        // Communicate commit decision to all affected DataStore(s), if any
+        final TwoPcDecisionMessage outMessageToDataStore = new TwoPcDecisionMessage(id, transactionId, decision);
+        affectedDataStores.forEach(dataStore -> {
+            dataStore.ref.tell(outMessageToDataStore, getSender());
+            LOGGER.trace("Coordinator {} send to affected DataStore {} to {} transaction {} TwoPcDecisionMessage: {}", id, dataStore.id, decision, transactionId, outMessageToDataStore);
+        });
+        LOGGER.debug("Coordinator {} send to {} affected DataStore(s) to {} transaction {} TwoPcDecisionMessage: {}", id, affectedDataStores.size(), decision, transactionId, outMessageToDataStore);
+
+        // Communicate commit decision to Client
+        final ActorMetadata client = transactionIdToClient.get(transactionId);
+        final TxnResultMessage outMessageToClient = new TxnResultMessage(decision);
+        client.ref.tell(outMessageToClient, getSender());
+        LOGGER.debug("Coordinator {} send to Client {} that transaction {} is {} TxnResultMessage: {}", id, client.id, transactionId, decision, outMessageToClient);
+
+        // Clean resources
+        cleanResources(transactionId);
     }
 
     /**
@@ -180,8 +210,13 @@ public final class Coordinator extends Actor {
      *
      * @param message Received message
      */
-    private void onTxnBeginMessage(TxnBeginMessage message) {
+    private void onTxnBeginMessage(TxnBeginMessage message) throws TransactionIsRunningException {
         LOGGER.debug("Coordinator {} received from Client {} TxnBeginMessage: {}", id, message.clientId, message);
+
+        // Check if Client has already a transaction running
+        final UUID transactionIdRunning = clientIdToTransactionId.get(message.clientId);
+        if (transactionIdRunning != null)
+            throw new TransactionIsRunningException(String.format("Coordinator %d received a TxnBeginMessage from Client %d when transaction %s is running", id, message.clientId, transactionIdRunning));
 
         // Generate a transaction id and store all relevant data
         final UUID transactionId = UUID.randomUUID();
@@ -203,7 +238,7 @@ public final class Coordinator extends Actor {
         LOGGER.debug("Coordinator {} received from Client {} ReadMessage: {}", id, message.clientId, message);
 
         // Obtain correct DataStore
-        final ActorMetadata dataStore = dataStoreMetadataByItemKey(message.key);
+        final ActorMetadata dataStore = dataStoreByItemKey(message.key);
 
         // Obtain transaction id
         final UUID transactionId = clientIdToTransactionId.get(message.clientId);
@@ -240,7 +275,7 @@ public final class Coordinator extends Actor {
         LOGGER.debug("Coordinator {} received from Client {} WriteMessage: {}", id, message.clientId, message);
 
         // Obtain correct DataStore
-        final ActorMetadata dataStore = dataStoreMetadataByItemKey(message.key);
+        final ActorMetadata dataStore = dataStoreByItemKey(message.key);
 
         // Obtain transaction id
         final UUID transactionId = clientIdToTransactionId.get(message.clientId);
@@ -274,20 +309,32 @@ public final class Coordinator extends Actor {
         // Send to affected DataStore(s) 2PC request message
         final Set<ActorMetadata> affectedDataStores = dataStoresAffectedInTransaction.getOrDefault(transactionId, new HashSet<>());
 
-        // Check if there is at least one affected DataStore due to a write request
-        if (!affectedDataStores.isEmpty()) {
-            // DataStore(s) affected
-            final TwoPcVoteRequestMessage outMessage = new TwoPcVoteRequestMessage(id, transactionId, message.decision);
-            affectedDataStores.forEach(dataStore -> {
-                dataStore.ref.tell(outMessage, getSelf());
-                LOGGER.trace("Coordinator {} send to affected DataStore {} involving transaction {} TwoPcVoteRequestMessage: {}", id, dataStore.id, transactionId, outMessage);
-            });
-            LOGGER.debug("Coordinator {} send to {} affected DataStore(s) TwoPcVoteRequestMessage: {}", id, affectedDataStores.size(), outMessage);
-        } else {
-            // No DataStore(s) affected
-            final TwoPcVoteResponseMessage outMessage = new TwoPcVoteResponseMessage(NO_DATA_STORE_AFFECTED_ID, transactionId, message.decision);
-            getSelf().tell(outMessage, getSelf());
-            LOGGER.debug("Coordinator {} send to himself TwoPcVoteResponseMessage due to no DataStore(s) affected: {}", id, outMessage);
+        // Check Client decision
+        switch (message.decision) {
+            case COMMIT: {
+                // Client decided to commit
+                LOGGER.info("Coordinator {} informed that Client {} want to COMMIT transaction {}", id, message.clientId, transactionId);
+                // Check if there is at least one affected DataStore due to a write request
+                if (!affectedDataStores.isEmpty()) {
+                    // DataStore(s) affected
+                    final TwoPcVoteRequestMessage outMessage = new TwoPcVoteRequestMessage(id, transactionId, TwoPcDecision.COMMIT);
+                    affectedDataStores.forEach(dataStore -> {
+                        dataStore.ref.tell(outMessage, getSelf());
+                        LOGGER.trace("Coordinator {} send to affected DataStore {} if can COMMIT transaction {} TwoPcVoteRequestMessage: {}", id, dataStore.id, transactionId, outMessage);
+                    });
+                    LOGGER.debug("Coordinator {} send to {} affected DataStore(s) if can COMMIT transaction {} TwoPcVoteRequestMessage: {}", id, affectedDataStores.size(), transactionId, outMessage);
+                } else {
+                    // No DataStore(s) affected
+                    terminateTransaction(transactionId, TwoPcDecision.COMMIT);
+                }
+                break;
+            }
+            case ABORT: {
+                // Client decided to abort
+                LOGGER.info("Coordinator {} informed that Client {} want to ABORT transaction {}", id, message.clientId, transactionId);
+                terminateTransaction(transactionId, TwoPcDecision.ABORT);
+                break;
+            }
         }
     }
 
@@ -302,9 +349,7 @@ public final class Coordinator extends Actor {
         // Obtain or create DataStore(s) decisions
         final Set<DataStoreDecision> decisions = transactionDecisions.computeIfAbsent(message.transactionId, k -> new HashSet<>());
         // Add decision of the DataStore
-        if (message.dataStoreId != NO_DATA_STORE_AFFECTED_ID) {
-            decisions.add(DataStoreDecision.of(message.dataStoreId, message.decision));
-        }
+        decisions.add(DataStoreDecision.of(message.dataStoreId, message.decision));
 
         // Data stores affected in current transaction
         final Set<ActorMetadata> affectedDataStores = dataStoresAffectedInTransaction.getOrDefault(message.transactionId, new HashSet<>());
@@ -313,6 +358,7 @@ public final class Coordinator extends Actor {
         if (decisions.size() == affectedDataStores.size()) {
             final TwoPcDecision decision;
 
+            // Obtain final decision if commit or abort
             if (canCommit(decisions)) {
                 decision = TwoPcDecision.COMMIT;
                 LOGGER.info("Coordinator {} decided to commit transaction {}: {}", id, message.transactionId, decisions);
@@ -321,22 +367,8 @@ public final class Coordinator extends Actor {
                 LOGGER.info("Coordinator {} decided to abort transaction {}: {}", id, message.transactionId, decisions);
             }
 
-            // Communicate commit decision to all affected DataStore(s)
-            final TwoPcDecisionMessage outMessageToDataStore = new TwoPcDecisionMessage(id, message.transactionId, decision);
-            affectedDataStores.forEach(dataStore -> {
-                dataStore.ref.tell(outMessageToDataStore, getSender());
-                LOGGER.trace("Coordinator {} send to affected DataStore {} involving transaction {} TwoPcDecisionMessage: {}", id, dataStore.id, message.transactionId, outMessageToDataStore);
-            });
-            LOGGER.debug("Coordinator {} send to {} affected DataStore(s) TwoPcDecisionMessage: {}", id, affectedDataStores.size(), outMessageToDataStore);
-
-            // Communicate commit decision to Client
-            final ActorMetadata client = transactionIdToClient.get(message.transactionId);
-            final TxnResultMessage outMessageToClient = new TxnResultMessage(decision);
-            client.ref.tell(outMessageToClient, getSender());
-            LOGGER.debug("Coordinator {} send to Client {} TxnResultMessage: {}", id, client.id, outMessageToClient);
-
-            // Clean resources
-            cleanResources(message.transactionId);
+            // Terminate transaction
+            terminateTransaction(message.transactionId, decision);
         }
     }
 
@@ -373,7 +405,7 @@ public final class Coordinator extends Actor {
         // Check if all snapshots have been received
         if (snapshot.size() == (dataStores.size() * 10)) {
             // Print snapshot
-            LOGGER.info("Coordinator {} snapshot {}: {}", id, message.snapshotId, new Gson().toJson(snapshot));
+            LOGGER.info("Coordinator {} snapshot {}: {}", id, message.snapshotId, GSON.toJson(snapshot));
 
             // Calculate total Items value sum
             final int totalSum = snapshot.values().stream().mapToInt(item -> item.value).reduce(0, Integer::sum);

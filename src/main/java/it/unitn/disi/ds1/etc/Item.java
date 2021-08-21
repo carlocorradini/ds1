@@ -31,6 +31,7 @@ public final class Item {
      */
     private static final Gson GSON = new GsonBuilder()
             .excludeFieldsWithoutExposeAnnotation()
+            .serializeNulls()
             .create();
 
     /**
