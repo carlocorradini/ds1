@@ -158,7 +158,7 @@ public final class Coordinator extends Actor {
         // Data stores affected in current transaction
         final Set<ActorMetadata> affectedDataStores = dataStoresAffectedInTransaction.getOrDefault(transactionId, new HashSet<>());
 
-        // Communicate commit decision to all affected DataStore(s), if any
+        // Communicate decision to all affected DataStore(s), if any
         final TwoPcDecisionMessage outMessageToDataStore = new TwoPcDecisionMessage(id, transactionId, decision);
         affectedDataStores.forEach(dataStore -> {
             dataStore.ref.tell(outMessageToDataStore, getSender());

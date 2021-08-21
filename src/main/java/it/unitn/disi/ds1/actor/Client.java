@@ -360,18 +360,20 @@ public final class Client extends Actor {
     private void onTxnResultMsg(TxnResultMessage message) {
         LOGGER.debug("Client {} received TxnResultMessage with decision {}: {}", id, message.decision, message);
 
-        if (message.decision == TwoPcDecision.COMMIT) {
-            txnCommitted++;
-            LOGGER.info("Client {} TXNs COMMIT OK ({}/{})", id, txnCommitted, txnAttempted);
-        } else {
-            int txnFailed = txnAttempted - txnCommitted;
-            LOGGER.info("Client {} TXNs COMMIT FAIL ({}/{})", id, txnFailed, txnAttempted);
+        switch (message.decision) {
+            case COMMIT: {
+                txnCommitted++;
+                LOGGER.info("Client {} TXNs COMMIT OK ({}/{})", id, txnCommitted, txnAttempted);
+                break;
+            }
+            case ABORT: {
+                int txnFailed = txnAttempted - txnCommitted;
+                LOGGER.info("Client {} TXNs COMMIT FAIL ({}/{})", id, txnFailed, txnAttempted);
+                break;
+            }
         }
 
         LOGGER.info("End TXN by Client {}", id);
-
-        // FIXME Mettere un qualcosa all'utente per rifare comunicazioni
-        //beginTxn();
     }
 
     /*-- Message handlers ----------------------------------------------------- */

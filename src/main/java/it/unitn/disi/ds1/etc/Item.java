@@ -111,7 +111,7 @@ public final class Item {
      * @return True if same locker, false otherwise
      */
     public synchronized boolean isLocker(UUID locker) {
-        return isLocked() && this.locker == locker;
+        return isLocked() && this.locker.equals(locker);
     }
 
     /**
@@ -126,7 +126,7 @@ public final class Item {
 
         // Lock item
         this.locker = locker;
-        return true;
+        return isLocker(locker);
     }
 
     /**
