@@ -129,6 +129,21 @@ public final class Coordinator extends Actor {
         return decisions.stream().allMatch(decision -> decision.decision == TwoPcDecision.COMMIT);
     }
 
+    /**
+     * Clean all resources that involves {@link UUID transaction}.
+     *
+     * @param transactionId Transaction id
+     */
+    private void cleanResources(UUID transactionId) {
+        if (transactionId == null) return;
+
+        transactionIdToClient.remove(transactionId);
+        clientIdToTransactionId.values().remove(transactionId);
+        dataStoresAffectedInTransaction.remove(transactionId);
+        transactionDecisions.remove(transactionId);
+        LOGGER.trace("Coordinator {} clean resources involving transaction {}", id, transactionId);
+    }
+
     // --- Message handlers --
 
     /**
@@ -299,11 +314,7 @@ public final class Coordinator extends Actor {
             LOGGER.debug("Coordinator {} send to Client {} TxnResultMessage: {}", id, client.id, outMessageToClient);
 
             // Clean resources
-            transactionIdToClient.remove(message.transactionId);
-            clientIdToTransactionId.values().remove(message.transactionId);
-            dataStoresAffectedInTransaction.remove(message.transactionId);
-            transactionDecisions.remove(message.transactionId);
-            LOGGER.trace("Coordinator {} clean resources involving client {} in transaction {}", id, client.id, message.transactionId);
+            cleanResources(message.transactionId);
         }
     }
 }
