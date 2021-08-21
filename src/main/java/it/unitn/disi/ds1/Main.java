@@ -33,7 +33,7 @@ public final class Main {
     /**
      * Number of {@link Client Client(s)}.
      */
-    private final static int N_CLIENTS = 32;
+    private final static int N_CLIENTS = 2;
 
     /**
      * Maximum item key index value.
@@ -75,13 +75,36 @@ public final class Main {
         clients.forEach(client -> client.ref.tell(clientWelcomeMessage, ActorRef.noSender()));
 
         // --- Run ---
-        // FIXME
-        new Timer().schedule(new TimerTask() {
-            @Override
-            public void run() {
-                final ActorMetadata coordinator = coordinators.get(new Random().nextInt(coordinators.size()));
-                coordinator.ref.tell(new StartSnapshotMessage(0), ActorRef.noSender());
+        final Scanner scanner = new Scanner(System.in);
+        final Random random = new Random();
+        int snapshotId = 0;
+        boolean terminate;
+
+        do {
+            // Wait ...
+            System.out.println("--- AFTER ALL TRANSACTION(S) PRESS `ENTER` TO CONTINUE...");
+            scanner.nextLine();
+
+            // Verify storage ?
+            System.out.print("--- VERIFY STORAGE [Y|N]? ");
+            final boolean verifyStorage = scanner.nextLine().matches("(?i)^(?:y(?:es)?|1)$");
+            if (verifyStorage) {
+                coordinators
+                        .get(random.nextInt(coordinators.size()))
+                        .ref.tell(new StartSnapshotMessage(snapshotId++), ActorRef.noSender());
             }
-        }, 5000);
+
+            // Terminate ?
+            System.out.println("--- TERMINATE [Y|N]? ");
+            terminate = scanner.nextLine().toUpperCase().matches("(?i)^(?:y(?:es)?|1)$");
+            if (!terminate) {
+                clients.forEach(client -> client.ref.tell(clientWelcomeMessage, ActorRef.noSender()));
+                System.out.flush();
+            }
+        } while (!terminate);
+
+        // Terminate
+        LOGGER.info("Terminating system...");
+        system.terminate();
     }
 }
