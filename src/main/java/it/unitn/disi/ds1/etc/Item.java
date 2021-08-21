@@ -12,6 +12,24 @@ import java.util.UUID;
  */
 public final class Item {
     /**
+     * Available operations for the Item.
+     */
+    public enum Operation {
+        /**
+         * None.
+         */
+        NONE,
+        /**
+         * Read.
+         */
+        READ,
+        /**
+         * Write.
+         */
+        WRITE
+    }
+
+    /**
      * Default value.
      */
     public static final int DEFAULT_VALUE = 100;
@@ -20,6 +38,11 @@ public final class Item {
      * Default version.
      */
     public static final int DEFAULT_VERSION = 0;
+
+    /**
+     * Default operation.
+     */
+    public static final Operation DEFAULT_OPERATION = Operation.NONE;
 
     /**
      * Default locker.
@@ -50,6 +73,12 @@ public final class Item {
     public final int version;
 
     /**
+     * Last operation done on the Item.
+     */
+    @Expose
+    public final Operation operation;
+
+    /**
      * {@link UUID Transaction} that is locking the Item.
      */
     @Expose
@@ -58,40 +87,34 @@ public final class Item {
     /**
      * Construct a new Item class.
      *
-     * @param value   Value of the item
-     * @param version Version of the item
-     * @param locker  {@link UUID Transaction} that is locking the item
+     * @param value     Value of the item
+     * @param version   Version of the item
+     * @param operation Last operation done on the Item
+     * @param locker    {@link UUID Transaction} that is locking the item
      */
-    public Item(int value, int version, UUID locker) {
+    public Item(int value, int version, Operation operation, UUID locker) {
         this.value = value;
         this.version = version;
+        this.operation = operation;
         this.locker = locker;
     }
 
     /**
      * Construct a new Item class.
      *
-     * @param value   Value of the item
-     * @param version Version of the item
+     * @param value     Value of the item
+     * @param version   Version of the item
+     * @param operation Last operation done on the Item
      */
-    public Item(int value, int version) {
-        this(value, version, DEFAULT_LOCKER);
-    }
-
-    /**
-     * Construct a new Item class.
-     *
-     * @param value Value of the item
-     */
-    public Item(int value) {
-        this(value, DEFAULT_VERSION);
+    public Item(int value, int version, Operation operation) {
+        this(value, version, operation, DEFAULT_LOCKER);
     }
 
     /**
      * Construct a new Item class.
      */
     public Item() {
-        this(DEFAULT_VALUE);
+        this(DEFAULT_VALUE, DEFAULT_VERSION, DEFAULT_OPERATION);
     }
 
     /**

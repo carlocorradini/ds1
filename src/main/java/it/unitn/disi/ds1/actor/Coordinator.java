@@ -243,6 +243,14 @@ public final class Coordinator extends Actor {
         // Obtain transaction id
         final UUID transactionId = clientIdToTransactionId.get(message.clientId);
 
+        // Add DataStore to affected in transaction
+        final Set<ActorMetadata> dataStoresAffected = dataStoresAffectedInTransaction.computeIfAbsent(transactionId, k -> new HashSet<>());
+        if (dataStoresAffected.add(dataStore)) {
+            LOGGER.trace("Coordinator {} add DataStore {} to affected DataStore(s) for transaction {}", id, dataStore.id, transactionId);
+        } else {
+            LOGGER.trace("Coordinator {} DataStore {} already present in affected DataStore(s) for transaction {}", id, dataStore.id, transactionId);
+        }
+
         // Send to DataStore Item read message
         final ReadCoordinatorMessage outMessage = new ReadCoordinatorMessage(id, transactionId, message.key);
         dataStore.ref.tell(outMessage, getSelf());
@@ -280,10 +288,9 @@ public final class Coordinator extends Actor {
         // Obtain transaction id
         final UUID transactionId = clientIdToTransactionId.get(message.clientId);
 
-        // Add DataStore to the affected for the current transaction
+        // Add DataStore to affected in transaction
         final Set<ActorMetadata> dataStoresAffected = dataStoresAffectedInTransaction.computeIfAbsent(transactionId, k -> new HashSet<>());
-        if (!dataStoresAffected.contains(dataStore)) {
-            dataStoresAffected.add(dataStore);
+        if (dataStoresAffected.add(dataStore)) {
             LOGGER.trace("Coordinator {} add DataStore {} to affected DataStore(s) for transaction {}", id, dataStore.id, transactionId);
         } else {
             LOGGER.trace("Coordinator {} DataStore {} already present in affected DataStore(s) for transaction {}", id, dataStore.id, transactionId);
@@ -313,7 +320,7 @@ public final class Coordinator extends Actor {
                 LOGGER.info("Coordinator {} informed that Client {} want to COMMIT transaction {}", id, message.clientId, transactionId);
                 // Obtain affected DataStore(s) in transaction
                 final Set<ActorMetadata> affectedDataStores = dataStoresAffectedInTransaction.getOrDefault(transactionId, new HashSet<>());
-                // Check if there is at least one affected DataStore due to a write request
+                // Check if there is at least one affected DataStore
                 if (!affectedDataStores.isEmpty()) {
                     // DataStore(s) affected
                     final TwoPcVoteRequestMessage outMessage = new TwoPcVoteRequestMessage(id, transactionId, TwoPcDecision.COMMIT);

@@ -142,7 +142,15 @@ public final class DataStore extends Actor {
             final Item itemInWorkSpace = entry.getValue();
             final Item itemInStorage = storage.get(entry.getKey());
 
-            return itemInWorkSpace.version == itemInStorage.version + 1;
+            // FIXME Non so
+            switch (itemInWorkSpace.operation) {
+                case READ:
+                    return itemInWorkSpace.version == itemInStorage.version;
+                case WRITE:
+                    return itemInWorkSpace.version == itemInStorage.version + 1;
+                default:
+                    throw new IllegalStateException(String.format("DataStore %d has invalid Item %d operation value during checkItemsVersion in workspace %s: %s", id, entry.getKey(), transactionId, itemInWorkSpace));
+            }
         });
     }
 
@@ -220,23 +228,21 @@ public final class DataStore extends Actor {
     private void onReadCoordinatorMessage(ReadCoordinatorMessage message) {
         LOGGER.debug("DataStore {} received from Coordinator {} ReadCoordinatorMessage: {}", id, message.coordinatorId, message);
 
-        final Item item;
+        // Obtain private workspace, otherwise create
+        final Map<Integer, Item> workspace = workspaces.computeIfAbsent(message.transactionId, k -> new HashMap<>());
+        // Obtain Item in storage
+        final Item itemInStorage = storage.get(message.key);
+        // Add item to workspace, if not present present
+        // FIXME Non so
+        final Item itemInWorkspace = workspace.computeIfAbsent(message.key, k -> {
+            final Item item = new Item(itemInStorage.value, itemInStorage.version, Item.Operation.READ);
+            LOGGER.trace("DataStore {} ReadCoordinatorMessage item {} in transaction {} added to workspace: {}", id, message.key, message.transactionId, item);
+            return item;
+        });
 
-        // Obtain item for the current transaction
-        final Map<Integer, Item> workspace = workspaces.get(message.transactionId);
-        if (workspace != null && workspace.containsKey(message.key)) {
-            // Item in workspace
-            item = workspace.get(message.key);
-            LOGGER.trace("DataStore {} ReadCoordinatorMessage item {} in transaction {} found in workspace: {}", id, message.key, message.transactionId, item);
-        } else {
-            // Item in storage
-            item = storage.get(message.key);
-            LOGGER.trace("DataStore {} ReadCoordinatorMessage item {} in transaction {} found in storage: {}", id, message.key, message.transactionId, item);
-        }
-
-        final ReadResultCoordinatorMessage outMessage = new ReadResultCoordinatorMessage(id, message.transactionId, message.key, item.value);
+        // Respond to Coordinator with Item
+        final ReadResultCoordinatorMessage outMessage = new ReadResultCoordinatorMessage(id, message.transactionId, message.key, itemInWorkspace.value);
         getSender().tell(outMessage, getSelf());
-
         LOGGER.debug("DataStore {} send to Coordinator {} ReadResultCoordinatorMessage: {}", id, message.coordinatorId, outMessage);
     }
 
@@ -250,16 +256,15 @@ public final class DataStore extends Actor {
 
         // Obtain private workspace, otherwise create
         final Map<Integer, Item> workspace = workspaces.computeIfAbsent(message.transactionId, k -> new HashMap<>());
-
-        // Add new item to workspace
+        // Obtain Item in storage
         final Item itemInStorage = storage.get(message.key);
-        final Item newItemInWorkspace = new Item(message.value, itemInStorage.version + 1);
-        if (workspace.isEmpty()) {
-            LOGGER.trace("DataStore {} add write request involving transaction {} in a new workspace: {}", id, message.transactionId, newItemInWorkspace);
-        } else {
-            LOGGER.trace("DataStore {} add write request involving transaction {} in an existing workspace: {}", id, message.transactionId, newItemInWorkspace);
-        }
-        workspace.put(message.key, newItemInWorkspace);
+        // Add item to workspace, if not present present
+        // FIXME Non so
+        workspace.compute(message.key, (k, v) -> {
+            final Item item = new Item(message.value, itemInStorage.version + 1, Item.Operation.WRITE);
+            LOGGER.trace("DataStore {} WriteCoordinatorMessage item {} in transaction {} added to workspace: {}", id, message.key, message.transactionId, item);
+            return item;
+        });
     }
 
     /**
@@ -308,6 +313,7 @@ public final class DataStore extends Actor {
                 if (workspace == null)
                     throw new NullPointerException(String.format("DataStore %d is unable to obtain workspace for transaction %s during onTwoPcDecisionMessage", id, message.transactionId));
                 // Commit
+                // FIXME Rimuovere operation
                 storage.putAll(workspaces.get(message.transactionId));
                 LOGGER.info("DataStore {} successfully committed transaction {}: {}", id, message.transactionId, GSON.toJson(workspace));
             }
