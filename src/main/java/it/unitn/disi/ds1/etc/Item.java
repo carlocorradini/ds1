@@ -114,7 +114,7 @@ public final class Item {
     }
 
     /**
-     * Lock the Item by locker and return if the operation has been successful.
+     * Lock the Item by locker and return true if the operation has been successful.
      *
      * @param locker {@link UUID Locker} trying to lock the Item
      * @return True if locked, false otherwise
