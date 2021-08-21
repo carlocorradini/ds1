@@ -119,11 +119,12 @@ public final class DataStore extends Actor {
      * Return true if version of the {@link Item Item(s)} in storage and workspace of {@link UUID transaction} match, otherwise false.
      *
      * @param transactionId Transaction id
-     * @return True if match, false otherwise
+     * @return True if matched, false otherwise
      */
     private synchronized boolean checkItemsVersion(UUID transactionId) {
         // Obtain private workspace of the transaction
         final Map<Integer, Item> workspace = workspaces.get(transactionId);
+        if (workspace == null) return false;
 
         return workspace.entrySet().stream().allMatch((entry) -> {
             final Item itemInWorkSpace = entry.getValue();
@@ -142,6 +143,7 @@ public final class DataStore extends Actor {
     private synchronized boolean lockItems(UUID transactionId) {
         // Obtain private workspace of the transaction
         final Map<Integer, Item> workspace = workspaces.get(transactionId);
+        if (workspace == null) return false;
 
         // Try to lock all Item(s) in storage involved in transaction
         final boolean locked = workspace.entrySet().stream()
@@ -159,7 +161,11 @@ public final class DataStore extends Actor {
      * @param transactionId {@link UUID Transaction} id
      */
     private synchronized void cleanLockItems(UUID transactionId) {
-        storage.forEach((key, value) -> value.unlockIfIsLocker(transactionId));
+        // Obtain private workspace of the transaction
+        final Map<Integer, Item> workspace = workspaces.get(transactionId);
+        if (workspace == null) return;
+
+        workspace.forEach((key, value) -> storage.get(key).unlockIfIsLocker(transactionId));
     }
 
     /**
@@ -170,10 +176,10 @@ public final class DataStore extends Actor {
     private void cleanResources(UUID transactionId) {
         if (transactionId == null) return;
 
-        // Clean private workspace
-        workspaces.remove(transactionId);
         // Clean possible locked Item(s)
         cleanLockItems(transactionId);
+        // Clean private workspace
+        workspaces.remove(transactionId);
         LOGGER.trace("DataStore {} clean resources involving transaction {}", id, transactionId);
     }
 
@@ -217,7 +223,7 @@ public final class DataStore extends Actor {
         final ReadResultCoordinatorMessage outMessage = new ReadResultCoordinatorMessage(id, message.transactionId, message.key, item.value);
         getSender().tell(outMessage, getSelf());
 
-        LOGGER.debug("DataStore {} send ReadResultCoordinatorMessage: {}", id, outMessage);
+        LOGGER.debug("DataStore {} send to Coordinator {} ReadResultCoordinatorMessage: {}", id, message.coordinatorId, outMessage);
     }
 
     /**
@@ -250,24 +256,31 @@ public final class DataStore extends Actor {
     private void onTwoPcVoteRequestMessage(TwoPcVoteRequestMessage message) {
         LOGGER.debug("DataStore {} received from Coordinator {} TwoPcVoteRequestMessage: {}", id, message.coordinatorId, message);
 
+        final boolean canCommit;
+
         // Check client decision
         switch (message.decision) {
             case COMMIT: {
                 // Check if transaction can commit
-                final boolean canCommit = canCommit(message.transactionId);
-                // Send response to Coordinator
-                final TwoPcVoteResponseMessage outMessage = new TwoPcVoteResponseMessage(id, message.transactionId, TwoPcDecision.valueOf(canCommit));
-                getSender().tell(outMessage, getSender());
-                LOGGER.debug("DataStore {} send to Coordinator {} TwoPcVoteResponseMessage: {}", id, message.coordinatorId, outMessage);
+                canCommit = canCommit(message.transactionId);
+                LOGGER.debug("DataStore {} received COMMIT from Coordinator {} and decision is {}", id, message.coordinatorId, TwoPcDecision.valueOf(canCommit));
                 break;
             }
             case ABORT: {
-                // Clean resources
-                cleanResources(message.transactionId);
-                LOGGER.debug("DataStore {} clean resources involving transaction {} due to Client abort", id, message.transactionId);
+                canCommit = false;
+                LOGGER.debug("DataStore {} received ABORT from Coordinator {}", id, message.transactionId);
                 break;
             }
+            default:
+                canCommit = false;
+                LOGGER.warn("DataStore {} received UNKNOWN decision from Coordinator {}", id, message.transactionId);
+                break;
         }
+
+        // Send response to Coordinator
+        final TwoPcVoteResponseMessage outMessage = new TwoPcVoteResponseMessage(id, message.transactionId, TwoPcDecision.valueOf(canCommit));
+        getSender().tell(outMessage, getSender());
+        LOGGER.debug("DataStore {} send to Coordinator {} TwoPcVoteResponseMessage: {}", id, message.coordinatorId, outMessage);
     }
 
     /**
@@ -280,8 +293,10 @@ public final class DataStore extends Actor {
 
         // If decision is to commit, let's commit
         if (message.decision == TwoPcDecision.COMMIT) {
-            // Commit
-            storage.putAll(workspaces.get(message.transactionId));
+            synchronized (storage) {
+                // Commit
+                storage.putAll(workspaces.get(message.transactionId));
+            }
             LOGGER.info("DataStore {} successfully committed transaction {}", id, message.transactionId);
         }
 
@@ -302,5 +317,24 @@ public final class DataStore extends Actor {
         final SnapshotTokenResultMessage outMessage = new SnapshotTokenResultMessage(id, message.snapshotId, storage);
         getSender().tell(outMessage, getSelf());
         LOGGER.debug("DataStore {} send to Coordinator {} SnapshotTokenResultMessage: {}", id, message.coordinatorId, outMessage);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        DataStore that = (DataStore) o;
+        return this.id == that.id;
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + id;
+        result = prime * result + (storage != null ? storage.hashCode() : 0);
+        result = prime * result + (workspaces != null ? workspaces.hashCode() : 0);
+        result = prime * result + (dataStores != null ? dataStores.hashCode() : 0);
+        return result;
     }
 }

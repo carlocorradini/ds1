@@ -42,6 +42,11 @@ public final class Coordinator extends Actor {
     private static final Logger LOGGER = LogManager.getLogger(Coordinator.class);
 
     /**
+     * Invalid {@link DataStore} id used when a {@link UUID transaction} have not affected any {@link DataStore DataStore(s)}.
+     */
+    private static final int NO_DATA_STORE_AFFECTED_ID = -1;
+
+    /**
      * {@link DataStore DataStore(s)} metadata.
      */
     private final List<ActorMetadata> dataStores;
@@ -270,15 +275,26 @@ public final class Coordinator extends Actor {
         final UUID transactionId = clientIdToTransactionId.get(message.clientId);
 
         // Send to affected DataStore(s) 2PC request message
-        final TwoPcVoteRequestMessage outMessage = new TwoPcVoteRequestMessage(id, transactionId, message.decision);
         final Set<ActorMetadata> affectedDataStores = dataStoresAffectedInTransaction.getOrDefault(transactionId, new HashSet<>());
-        affectedDataStores.forEach(dataStore -> {
-            dataStore.ref.tell(outMessage, getSelf());
-            LOGGER.trace("Coordinator {} send to affected DataStore {} involving transaction {} TwoPcVoteRequestMessage: {}", id, dataStore.id, transactionId, outMessage);
-        });
-        LOGGER.debug("Coordinator {} send to {} affected DataStore(s) TwoPcVoteRequestMessage: {}", id, affectedDataStores.size(), outMessage);
+
+        // Check if there is at least one affected DataStore due to a write request
+        if (!affectedDataStores.isEmpty()) {
+            // DataStore(s) affected
+            final TwoPcVoteRequestMessage outMessage = new TwoPcVoteRequestMessage(id, transactionId, message.decision);
+            affectedDataStores.forEach(dataStore -> {
+                dataStore.ref.tell(outMessage, getSelf());
+                LOGGER.trace("Coordinator {} send to affected DataStore {} involving transaction {} TwoPcVoteRequestMessage: {}", id, dataStore.id, transactionId, outMessage);
+            });
+            LOGGER.debug("Coordinator {} send to {} affected DataStore(s) TwoPcVoteRequestMessage: {}", id, affectedDataStores.size(), outMessage);
+        } else {
+            // No DataStore(s) affected
+            final TwoPcVoteResponseMessage outMessage = new TwoPcVoteResponseMessage(NO_DATA_STORE_AFFECTED_ID, transactionId, message.decision);
+            getSelf().tell(outMessage, getSelf());
+            LOGGER.debug("Coordinator {} send to himself TwoPcVoteResponseMessage due to no DataStore(s) affected: {}", id, outMessage);
+        }
 
         // If Client decided to abort, reply immediately
+        // TODO Cambiare posizione?
         if (message.decision == TwoPcDecision.ABORT) {
             final TxnResultMessage abortMessage = new TxnResultMessage(message.decision);
             getSender().tell(abortMessage, getSelf());
@@ -297,10 +313,12 @@ public final class Coordinator extends Actor {
         // Obtain or create DataStore(s) decisions
         final Set<DataStoreDecision> decisions = transactionDecisions.computeIfAbsent(message.transactionId, k -> new HashSet<>());
         // Add decision of the DataStore
-        decisions.add(DataStoreDecision.of(message.dataStoreId, message.decision));
+        if (message.dataStoreId != NO_DATA_STORE_AFFECTED_ID) {
+            decisions.add(DataStoreDecision.of(message.dataStoreId, message.decision));
+        }
 
         // Data stores affected in current transaction
-        final Set<ActorMetadata> affectedDataStores = dataStoresAffectedInTransaction.get(message.transactionId);
+        final Set<ActorMetadata> affectedDataStores = dataStoresAffectedInTransaction.getOrDefault(message.transactionId, new HashSet<>());
 
         // Check if the number of decisions has reached all affected DataStore(s)
         if (decisions.size() == affectedDataStores.size()) {
@@ -324,7 +342,7 @@ public final class Coordinator extends Actor {
 
             // Communicate commit decision to Client
             final ActorMetadata client = transactionIdToClient.get(message.transactionId);
-            final TxnResultMessage outMessageToClient = new TxnResultMessage(message.decision);
+            final TxnResultMessage outMessageToClient = new TxnResultMessage(decision);
             client.ref.tell(outMessageToClient, getSender());
             LOGGER.debug("Coordinator {} send to Client {} TxnResultMessage: {}", id, client.id, outMessageToClient);
 

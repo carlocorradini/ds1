@@ -23,17 +23,17 @@ public final class Main {
     /**
      * Number of {@link DataStore Data Store(s)}.
      */
-    private final static int N_DATA_STORES = 3;
+    private final static int N_DATA_STORES = 2;
 
     /**
      * Number of {@link Coordinator Coordinator(s)}.
      */
-    private final static int N_COORDINATORS = 2;
+    private final static int N_COORDINATORS = 8;
 
     /**
      * Number of {@link Client Client(s)}.
      */
-    private final static int N_CLIENTS = 3;
+    private final static int N_CLIENTS = 32;
 
     /**
      * Maximum item key index value.

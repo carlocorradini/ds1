@@ -333,6 +333,7 @@ public final class Client extends Actor {
         // Save read value(s)
         if (message.key == txnFirstKey) txnFirstValue = message.value;
         else if (message.key == txnSecondKey) txnSecondValue = message.value;
+        else LOGGER.warn("Client {} unknown Item key in ReadResultMessage: {}", id, message);
 
         final boolean opDone = (txnFirstValue != null && txnSecondValue != null);
 
