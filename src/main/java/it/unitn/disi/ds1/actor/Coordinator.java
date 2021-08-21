@@ -29,9 +29,6 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 
-import static java.util.Map.Entry.comparingByKey;
-import static java.util.stream.Collectors.toMap;
-
 /**
  * Coordinator {@link Actor actor} class.
  */
@@ -291,14 +288,6 @@ public final class Coordinator extends Actor {
             final TwoPcVoteResponseMessage outMessage = new TwoPcVoteResponseMessage(NO_DATA_STORE_AFFECTED_ID, transactionId, message.decision);
             getSelf().tell(outMessage, getSelf());
             LOGGER.debug("Coordinator {} send to himself TwoPcVoteResponseMessage due to no DataStore(s) affected: {}", id, outMessage);
-        }
-
-        // If Client decided to abort, reply immediately
-        // TODO Cambiare posizione?
-        if (message.decision == TwoPcDecision.ABORT) {
-            final TxnResultMessage abortMessage = new TxnResultMessage(message.decision);
-            getSender().tell(abortMessage, getSelf());
-            LOGGER.debug("Coordinator {} send to Client {} due to Client abort TxnResultMessage: {}", id, message.clientId, abortMessage);
         }
     }
 

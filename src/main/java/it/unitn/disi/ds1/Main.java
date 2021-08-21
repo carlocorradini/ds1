@@ -33,7 +33,7 @@ public final class Main {
     /**
      * Number of {@link Client Client(s)}.
      */
-    private final static int N_CLIENTS = 32;
+    private final static int N_CLIENTS = 64;
 
     /**
      * Maximum item key index value.
@@ -82,7 +82,7 @@ public final class Main {
                 final ActorMetadata coordinator = coordinators.get(new Random().nextInt(coordinators.size()));
                 coordinator.ref.tell(new StartSnapshotMessage(0), ActorRef.noSender());
             }
-        }, 10000);
+        }, 20000);
 
         // Wait until `ENTER` key
         System.out.println(">>> Press ENTER to exit <<<");

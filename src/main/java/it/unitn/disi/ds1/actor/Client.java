@@ -39,12 +39,12 @@ public final class Client extends Actor {
     /**
      * Minimum transactions.
      */
-    private static final int MIN_TXN_LENGTH = 3;
+    private static final int MIN_TXN_LENGTH = 20;
 
     /**
      * Maximum transactions.
      */
-    private static final int MAX_TXN_LENGTH = 3;
+    private static final int MAX_TXN_LENGTH = 40;
 
     /**
      * Random range.
