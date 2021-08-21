@@ -52,7 +52,7 @@ public final class Item {
      * {@link UUID Transaction} that is locking the Item.
      */
     @Expose
-    public UUID locker;
+    public volatile UUID locker;
 
     /**
      * Construct a new Item class.
