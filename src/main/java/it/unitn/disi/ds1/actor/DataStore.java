@@ -110,16 +110,16 @@ public final class DataStore extends Actor {
      * @return True if can commit, false otherwise
      */
     private synchronized boolean canCommit(UUID transactionId) {
-        if (!checkItemsVersion(transactionId)) {
-            LOGGER.debug("DataStore {} check Item(s) version in transaction {} has failed", id, transactionId);
-            return false;
-        }
-        LOGGER.debug("DataStore {} check Item(s) version in transaction {} is successful", id, transactionId);
         if (!lockItems(transactionId)) {
             LOGGER.debug("DataStore {} lock Item(s) in transaction {} has failed", id, transactionId);
             return false;
         }
         LOGGER.debug("DataStore {} lock Item(s) in transaction {} is successful", id, transactionId);
+        if (!checkItemsVersion(transactionId)) {
+            LOGGER.debug("DataStore {} check Item(s) version in transaction {} has failed", id, transactionId);
+            return false;
+        }
+        LOGGER.debug("DataStore {} check Item(s) version in transaction {} is successful", id, transactionId);
 
         // Able to commit
         LOGGER.debug("DataStore {} can successfully commit transaction {}", id, transactionId);
@@ -258,13 +258,11 @@ public final class DataStore extends Actor {
         final Map<Integer, Item> workspace = workspaces.computeIfAbsent(message.transactionId, k -> new HashMap<>());
         // Obtain Item in storage
         final Item itemInStorage = storage.get(message.key);
-        // Add item to workspace, if not present present
-        // FIXME Non so
-        workspace.compute(message.key, (k, v) -> {
-            final Item item = new Item(message.value, itemInStorage.version + 1, Item.Operation.WRITE);
-            LOGGER.trace("DataStore {} WriteCoordinatorMessage item {} in transaction {} added to workspace: {}", id, message.key, message.transactionId, item);
-            return item;
-        });
+        // Generate new Item for workspace
+        final Item newItem = new Item(message.value, itemInStorage.version + 1, Item.Operation.WRITE);
+        // Add new Item to workspace
+        workspace.put(message.key, newItem);
+        LOGGER.trace("DataStore {} WriteCoordinatorMessage item {} in transaction {} added to workspace: {}", id, message.key, message.transactionId, newItem);
     }
 
     /**
