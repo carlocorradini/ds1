@@ -10,6 +10,8 @@ import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecisionMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcVoteRequestMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcVoteResponseMessage;
+import it.unitn.disi.ds1.message.snap.SnapshotTokenMessage;
+import it.unitn.disi.ds1.message.snap.SnapshotTokenResultMessage;
 import it.unitn.disi.ds1.message.welcome.DataStoreWelcomeMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -81,6 +83,7 @@ public final class DataStore extends Actor {
                 .match(WriteCoordinatorMessage.class, this::onWriteCoordinatorMessage)
                 .match(TwoPcVoteRequestMessage.class, this::onTwoPcVoteRequestMessage)
                 .match(TwoPcDecisionMessage.class, this::onTwoPcDecisionMessage)
+                .match(SnapshotTokenMessage.class, this::onSnapshotTokenMessage)
                 .build();
     }
 
@@ -275,6 +278,7 @@ public final class DataStore extends Actor {
     private void onTwoPcDecisionMessage(TwoPcDecisionMessage message) {
         LOGGER.debug("DataStore {} received from Coordinator {} TwoPcDecisionMessage: {}", id, message.coordinatorId, message);
 
+        // If decision is to commit, let's commit
         if (message.decision == TwoPcDecision.COMMIT) {
             // Commit
             storage.putAll(workspaces.get(message.transactionId));
@@ -283,5 +287,20 @@ public final class DataStore extends Actor {
 
         // Clean resources
         cleanResources(message.transactionId);
+    }
+
+    /**
+     * Callback for {@link SnapshotTokenMessage message}.
+     *
+     * @param message Received message
+     */
+    private void onSnapshotTokenMessage(SnapshotTokenMessage message) {
+        LOGGER.debug("DataStore {} received from Coordinator {} SnapshotTokenMessage: {}", id, message.coordinatorId, message);
+        LOGGER.trace("DataStore {} generating snapshot {} of storage: {}", id, message.snapshotId, storage);
+
+        // Send response to Coordinator
+        final SnapshotTokenResultMessage outMessage = new SnapshotTokenResultMessage(id, message.snapshotId, storage);
+        getSender().tell(outMessage, getSelf());
+        LOGGER.debug("DataStore {} send to Coordinator {} SnapshotTokenResultMessage: {}", id, message.coordinatorId, outMessage);
     }
 }

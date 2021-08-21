@@ -6,6 +6,7 @@ import it.unitn.disi.ds1.actor.Client;
 import it.unitn.disi.ds1.actor.Coordinator;
 import it.unitn.disi.ds1.actor.DataStore;
 import it.unitn.disi.ds1.etc.ActorMetadata;
+import it.unitn.disi.ds1.message.snap.StartSnapshotMessage;
 import it.unitn.disi.ds1.message.welcome.ClientWelcomeMessage;
 import it.unitn.disi.ds1.message.welcome.CoordinatorWelcomeMessage;
 import it.unitn.disi.ds1.message.welcome.DataStoreWelcomeMessage;
@@ -32,7 +33,7 @@ public final class Main {
     /**
      * Number of {@link Client Client(s)}.
      */
-    private final static int N_CLIENTS = 1;
+    private final static int N_CLIENTS = 3;
 
     /**
      * Maximum item key index value.
@@ -74,6 +75,15 @@ public final class Main {
         clients.forEach(client -> client.ref.tell(clientWelcomeMessage, ActorRef.noSender()));
 
         // --- Run ---
+        // FIXME
+        new Timer().schedule(new TimerTask() {
+            @Override
+            public void run() {
+                final ActorMetadata coordinator = coordinators.get(new Random().nextInt(coordinators.size()));
+                coordinator.ref.tell(new StartSnapshotMessage(0), ActorRef.noSender());
+            }
+        }, 10000);
+
         // Wait until `ENTER` key
         System.out.println(">>> Press ENTER to exit <<<");
         new Scanner(System.in).nextLine();

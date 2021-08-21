@@ -2,12 +2,16 @@ package it.unitn.disi.ds1.actor;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
+import com.google.gson.Gson;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.DataStoreDecision;
 import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecisionMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcVoteResponseMessage;
+import it.unitn.disi.ds1.message.snap.SnapshotTokenMessage;
+import it.unitn.disi.ds1.message.snap.SnapshotTokenResultMessage;
+import it.unitn.disi.ds1.message.snap.StartSnapshotMessage;
 import it.unitn.disi.ds1.message.txn.TxnEndMessage;
 import it.unitn.disi.ds1.message.txn.TxnResultMessage;
 import it.unitn.disi.ds1.message.op.read.ReadResultMessage;
@@ -24,6 +28,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.*;
+
+import static java.util.Map.Entry.comparingByKey;
+import static java.util.stream.Collectors.toMap;
 
 /**
  * Coordinator {@link Actor actor} class.
@@ -59,6 +66,11 @@ public final class Coordinator extends Actor {
      */
     private final Map<UUID, Set<DataStoreDecision>> transactionDecisions;
 
+    /**
+     * {@link DataStore DataStore(s)} storage snapshot(s).
+     */
+    private final Map<Integer, Item> snapshot;
+
     // --- Constructors ---
 
     /**
@@ -73,6 +85,7 @@ public final class Coordinator extends Actor {
         this.clientIdToTransactionId = new HashMap<>();
         this.dataStoresAffectedInTransaction = new HashMap<>();
         this.transactionDecisions = new HashMap<>();
+        this.snapshot = new TreeMap<>();
 
         LOGGER.debug("Coordinator {} initialized", id);
     }
@@ -97,6 +110,8 @@ public final class Coordinator extends Actor {
                 .match(WriteMessage.class, this::onWriteMessage)
                 .match(TxnEndMessage.class, this::onTxnEndMessage)
                 .match(TwoPcVoteResponseMessage.class, this::onTwoPcVoteResponseMessage)
+                .match(StartSnapshotMessage.class, this::onStartSnapshotMessage)
+                .match(SnapshotTokenResultMessage.class, this::onSnapshotTokenResultMessage)
                 .build();
     }
 
@@ -315,6 +330,56 @@ public final class Coordinator extends Actor {
 
             // Clean resources
             cleanResources(message.transactionId);
+        }
+    }
+
+    /**
+     * Callback for {@link StartSnapshotMessage} message.
+     *
+     * @param message Received message
+     */
+    private void onStartSnapshotMessage(StartSnapshotMessage message) {
+        LOGGER.debug("Coordinator {} received StartSnapshotMessage: {}", id, message);
+        LOGGER.trace("Coordinator {} start snapshot {} involving {} DataStore(s)", id, message.snapshotId, dataStores.size());
+
+        // Send to all DataStore(s) snapshot request
+        final SnapshotTokenMessage outMessage = new SnapshotTokenMessage(id, message.snapshotId);
+        dataStores.forEach(dataStore -> {
+            LOGGER.trace("Coordinator {} send to DataStore {} SnapshotTokenMessage: {}", id, dataStore.id, outMessage);
+            dataStore.ref.tell(outMessage, getSelf());
+        });
+
+        LOGGER.debug("Coordinator {} successfully sent snapshot request to {} DataStore(s)", id, dataStores.size());
+    }
+
+    /**
+     * Callback for {@link SnapshotTokenResultMessage} message.
+     *
+     * @param message Received message
+     */
+    private void onSnapshotTokenResultMessage(SnapshotTokenResultMessage message) {
+        LOGGER.debug("Coordinator {} received from DataStore {} StartSnapshotMessage: {}", id, message.dataStoreId, message);
+
+        // Add all storage from current DataStore to snapshot
+        snapshot.putAll(message.storage);
+
+        // Check if all snapshots have been received
+        if (snapshot.size() == (dataStores.size() * 10)) {
+            // Print snapshot
+            LOGGER.info("Coordinator {} snapshot {}: {}", id, message.snapshotId, new Gson().toJson(snapshot));
+
+            // Calculate total Items value sum
+            final int totalSum = snapshot.values().stream().mapToInt(item -> item.value).reduce(0, Integer::sum);
+            // Check if totalSum is valid
+            assert snapshot.size() * 100 == dataStores.size() * 10 * 100;
+            if (totalSum == snapshot.size() * 100) {
+                LOGGER.info("Coordinator {} snapshot {} sum {} is VALID", id, message.snapshotId, totalSum);
+            } else {
+                LOGGER.info("Coordinator {} snapshot {} sum {} is INVALID", id, message.snapshotId, totalSum);
+            }
+
+            // Clean snapshot
+            snapshot.clear();
         }
     }
 }
