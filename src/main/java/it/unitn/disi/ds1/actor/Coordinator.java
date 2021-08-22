@@ -18,7 +18,7 @@ import it.unitn.disi.ds1.message.txn.read.TxnReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.txn.write.TxnWriteCoordinatorMessage;
 import it.unitn.disi.ds1.message.txn.write.TxnWriteMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcVoteRequestMessage;
-import it.unitn.disi.ds1.message.txn.TxnAcceptMessage;
+import it.unitn.disi.ds1.message.txn.TxnBeginResultMessage;
 import it.unitn.disi.ds1.message.txn.TxnBeginMessage;
 import it.unitn.disi.ds1.message.welcome.CoordinatorWelcomeMessage;
 import it.unitn.disi.ds1.util.JsonUtil;
@@ -213,9 +213,9 @@ public final class Coordinator extends Actor {
         transactionIdToClient.put(transactionId, ActorMetadata.of(message.senderId, getSender()));
 
         // Inform Client that the transaction has been accepted
-        final TxnAcceptMessage outMessage = new TxnAcceptMessage(id);
+        final TxnBeginResultMessage outMessage = new TxnBeginResultMessage(id);
         getSender().tell(outMessage, getSelf());
-        LOGGER.debug("Coordinator {} send to Client {} involving transaction transactionId {} TxnAcceptMessage: {}", id, message.senderId, transactionId, outMessage);
+        LOGGER.debug("Coordinator {} send to Client {} involving transaction transactionId {} TxnBeginResultMessage: {}", id, message.senderId, transactionId, outMessage);
     }
 
     /**

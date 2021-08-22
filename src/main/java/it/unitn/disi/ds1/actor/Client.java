@@ -152,7 +152,7 @@ public final class Client extends Actor {
     public Receive createReceive() {
         return receiveBuilder()
                 .match(ClientWelcomeMessage.class, this::onClientWelcomeMessage)
-                .match(TxnAcceptMessage.class, this::onTxnAcceptMessage)
+                .match(TxnBeginResultMessage.class, this::onTxnBeginResultMessage)
                 .match(TxnAcceptTimeoutMessage.class, this::onTxnAcceptTimeoutMessage)
                 .match(TxnReadResultMessage.class, this::onTxnReadResultMessage)
                 .match(TxnEndResultMessage.class, this::onTxnEndResultMsg)
@@ -293,12 +293,12 @@ public final class Client extends Actor {
     }
 
     /**
-     * Callback for {@link TxnAcceptMessage} message.
+     * Callback for {@link TxnBeginResultMessage} message.
      *
      * @param message Received message
      */
-    private void onTxnAcceptMessage(TxnAcceptMessage message) {
-        LOGGER.debug("Client {} received TxnAcceptMessage: {}", id, message);
+    private void onTxnBeginResultMessage(TxnBeginResultMessage message) {
+        LOGGER.debug("Client {} received TxnBeginResultMessage: {}", id, message);
 
         txnAccepted = true;
         txnRequested = false;

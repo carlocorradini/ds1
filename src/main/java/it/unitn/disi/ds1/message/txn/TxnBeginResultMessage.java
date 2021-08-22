@@ -9,15 +9,15 @@ import java.io.Serializable;
  * Reply message to {@link TxnBeginMessage} informing that the transaction
  * has been correctly accepted.
  */
-public final class TxnAcceptMessage extends Message implements Serializable {
+public final class TxnBeginResultMessage extends Message implements Serializable {
     private static final long serialVersionUID = -6339782978102970100L;
 
     /**
-     * Construct a new TxnAcceptMessage class.
+     * Construct a new TxnBeginResultMessage class.
      *
      * @param coordinatorId {@link it.unitn.disi.ds1.actor.Coordinator} id
      */
-    public TxnAcceptMessage(int coordinatorId) {
+    public TxnBeginResultMessage(int coordinatorId) {
         super(coordinatorId);
     }
 
