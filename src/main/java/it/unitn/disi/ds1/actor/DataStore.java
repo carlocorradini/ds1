@@ -5,7 +5,7 @@ import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.message.op.read.TxnReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.read.TxnReadResultCoordinatorMessage;
-import it.unitn.disi.ds1.message.op.write.WriteCoordinatorMessage;
+import it.unitn.disi.ds1.message.op.write.TxnWriteCoordinatorMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecisionMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcVoteRequestMessage;
@@ -91,7 +91,7 @@ public final class DataStore extends Actor {
         return receiveBuilder()
                 .match(DataStoreWelcomeMessage.class, this::onDataStoreWelcomeMessage)
                 .match(TxnReadCoordinatorMessage.class, this::onTxnReadCoordinatorMessage)
-                .match(WriteCoordinatorMessage.class, this::onWriteCoordinatorMessage)
+                .match(TxnWriteCoordinatorMessage.class, this::onTxnWriteCoordinatorMessage)
                 .match(TwoPcVoteRequestMessage.class, this::onTwoPcVoteRequestMessage)
                 .match(TwoPcDecisionMessage.class, this::onTwoPcDecisionMessage)
                 .match(SnapshotMessage.class, this::onSnapshotMessage)
@@ -249,12 +249,12 @@ public final class DataStore extends Actor {
     }
 
     /**
-     * Callback for {@link WriteCoordinatorMessage} message.
+     * Callback for {@link TxnWriteCoordinatorMessage} message.
      *
      * @param message Received message
      */
-    private void onWriteCoordinatorMessage(WriteCoordinatorMessage message) {
-        LOGGER.debug("DataStore {} received from Coordinator {} WriteCoordinatorMessage: {}", id, message.coordinatorId, message);
+    private void onTxnWriteCoordinatorMessage(TxnWriteCoordinatorMessage message) {
+        LOGGER.debug("DataStore {} received from Coordinator {} TxnWriteCoordinatorMessage: {}", id, message.coordinatorId, message);
 
         // Obtain private workspace, otherwise create
         final Map<Integer, Item> workspace = workspaces.computeIfAbsent(message.transactionId, k -> new HashMap<>());
@@ -266,7 +266,7 @@ public final class DataStore extends Actor {
                 .build();
         // Add new Item to workspace
         workspace.put(message.key, newItem);
-        LOGGER.trace("DataStore {} WriteCoordinatorMessage item {} in transaction {} added to workspace: {}", id, message.key, message.transactionId, newItem);
+        LOGGER.trace("DataStore {} TxnWriteCoordinatorMessage item {} in transaction {} added to workspace: {}", id, message.key, message.transactionId, newItem);
     }
 
     /**

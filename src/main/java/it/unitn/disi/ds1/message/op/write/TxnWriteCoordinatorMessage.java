@@ -13,7 +13,7 @@ import java.io.Serializable;
  * Write request message
  * from {@link it.unitn.disi.ds1.actor.Coordinator} to {@link it.unitn.disi.ds1.actor.DataStore}.
  */
-public final class WriteCoordinatorMessage extends TxnMessage implements Serializable {
+public final class TxnWriteCoordinatorMessage extends TxnMessage implements Serializable {
     private static final long serialVersionUID = -4823398098700891377L;
 
     /**
@@ -35,14 +35,14 @@ public final class WriteCoordinatorMessage extends TxnMessage implements Seriali
     public final int value;
 
     /**
-     * Construct a new WriteCoordinatorMessage class.
+     * Construct a new TxnWriteCoordinatorMessage class.
      *
      * @param coordinatorId Coordinator id
      * @param transactionId Transaction id
      * @param key           Item key to write
      * @param value         Item new value to write
      */
-    public WriteCoordinatorMessage(int coordinatorId, UUID transactionId, int key, int value) {
+    public TxnWriteCoordinatorMessage(int coordinatorId, UUID transactionId, int key, int value) {
         super(transactionId);
         this.coordinatorId = coordinatorId;
         this.key = key;

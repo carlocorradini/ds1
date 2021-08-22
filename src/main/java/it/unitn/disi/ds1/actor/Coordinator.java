@@ -15,7 +15,7 @@ import it.unitn.disi.ds1.message.op.read.TxnReadResultMessage;
 import it.unitn.disi.ds1.message.op.read.TxnReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.read.TxnReadMessage;
 import it.unitn.disi.ds1.message.op.read.TxnReadResultCoordinatorMessage;
-import it.unitn.disi.ds1.message.op.write.WriteCoordinatorMessage;
+import it.unitn.disi.ds1.message.op.write.TxnWriteCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.write.WriteMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcVoteRequestMessage;
 import it.unitn.disi.ds1.message.txn.TxnAcceptMessage;
@@ -286,9 +286,9 @@ public final class Coordinator extends Actor {
         }
 
         // Send to DataStore Item write message
-        final WriteCoordinatorMessage outMessage = new WriteCoordinatorMessage(id, transactionId, message.key, message.value);
+        final TxnWriteCoordinatorMessage outMessage = new TxnWriteCoordinatorMessage(id, transactionId, message.key, message.value);
         dataStore.ref.tell(outMessage, getSelf());
-        LOGGER.debug("Coordinator {} send to DataStore {} WriteCoordinatorMessage: {}", id, dataStore.id, outMessage);
+        LOGGER.debug("Coordinator {} send to DataStore {} TxnWriteCoordinatorMessage: {}", id, dataStore.id, outMessage);
     }
 
     /**
