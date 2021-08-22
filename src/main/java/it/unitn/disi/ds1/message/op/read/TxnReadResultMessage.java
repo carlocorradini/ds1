@@ -11,7 +11,7 @@ import java.io.Serializable;
  * from {@link it.unitn.disi.ds1.actor.Coordinator} to {@link it.unitn.disi.ds1.actor.Client}
  * having the value of the corresponding key of the {@link Item}
  */
-public final class ReadResultMessage implements Serializable {
+public final class TxnReadResultMessage implements Serializable {
     private static final long serialVersionUID = 6073342617515584698L;
 
     /**
@@ -27,12 +27,12 @@ public final class ReadResultMessage implements Serializable {
     public final int value;
 
     /**
-     * Construct a new ReadResultMessage class.
+     * Construct a new TxnReadResultMessage class.
      *
      * @param key           Item key
      * @param value         Item value
      */
-    public ReadResultMessage(int key, int value) {
+    public TxnReadResultMessage(int key, int value) {
         this.key = key;
         this.value = value;
     }

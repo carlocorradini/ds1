@@ -8,7 +8,7 @@ import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.message.*;
 import it.unitn.disi.ds1.message.op.read.TxnReadMessage;
-import it.unitn.disi.ds1.message.op.read.ReadResultMessage;
+import it.unitn.disi.ds1.message.op.read.TxnReadResultMessage;
 import it.unitn.disi.ds1.message.op.write.WriteMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 import it.unitn.disi.ds1.message.txn.*;
@@ -154,7 +154,7 @@ public final class Client extends Actor {
                 .match(ClientWelcomeMessage.class, this::onClientWelcomeMessage)
                 .match(TxnAcceptMessage.class, this::onTxnAcceptMessage)
                 .match(TxnAcceptTimeoutMessage.class, this::onTxnAcceptTimeoutMessage)
-                .match(ReadResultMessage.class, this::onReadResultMessage)
+                .match(TxnReadResultMessage.class, this::onTxnReadResultMessage)
                 .match(TxnResultMessage.class, this::onTxnResultMsg)
                 .build();
     }
@@ -325,17 +325,16 @@ public final class Client extends Actor {
     }
 
     /**
-     * Callback for {@link ReadResultMessage} message.
+     * Callback for {@link TxnReadResultMessage} message.
      *
      * @param message Received message
      */
-    private void onReadResultMessage(ReadResultMessage message) {
-        LOGGER.debug("Client {} received ReadResultMessage: {}", id, message);
+    private void onTxnReadResultMessage(TxnReadResultMessage message) {
+        LOGGER.debug("Client {} received TxnReadResultMessage: {}", id, message);
 
         // Save read value(s)
         if (message.key == txnFirstKey) txnFirstValue = message.value;
         else if (message.key == txnSecondKey) txnSecondValue = message.value;
-        else LOGGER.warn("Client {} unknown Item key in ReadResultMessage: {}", id, message);
 
         final boolean opDone = (txnFirstValue != null && txnSecondValue != null);
 

@@ -26,7 +26,7 @@ public final class TxnReadMessage implements Serializable {
     public final int key;
 
     /**
-     * Construct a new ReadMessage class.
+     * Construct a new TxnReadMessage class.
      *
      * @param clientId      Client id
      * @param key           Item key to read

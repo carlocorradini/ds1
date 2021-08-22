@@ -11,7 +11,7 @@ import it.unitn.disi.ds1.message.snapshot.SnapshotMessage;
 import it.unitn.disi.ds1.message.snapshot.SnapshotResultMessage;
 import it.unitn.disi.ds1.message.txn.TxnEndMessage;
 import it.unitn.disi.ds1.message.txn.TxnResultMessage;
-import it.unitn.disi.ds1.message.op.read.ReadResultMessage;
+import it.unitn.disi.ds1.message.op.read.TxnReadResultMessage;
 import it.unitn.disi.ds1.message.op.read.ReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.read.TxnReadMessage;
 import it.unitn.disi.ds1.message.op.read.ReadResultCoordinatorMessage;
@@ -258,9 +258,9 @@ public final class Coordinator extends Actor {
         final ActorMetadata client = transactionIdToClient.get(message.transactionId);
 
         // Send to Client Item read reply message
-        final ReadResultMessage outMessage = new ReadResultMessage(message.key, message.value);
+        final TxnReadResultMessage outMessage = new TxnReadResultMessage(message.key, message.value);
         client.ref.tell(outMessage, getSelf());
-        LOGGER.debug("Coordinator {} send to Client {} ReadResultMessage: {}", id, client.id, outMessage);
+        LOGGER.debug("Coordinator {} send to Client {} TxnReadResultMessage: {}", id, client.id, outMessage);
     }
 
     /**
