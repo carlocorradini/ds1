@@ -4,7 +4,7 @@ import akka.actor.Props;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.message.op.read.TxnReadCoordinatorMessage;
-import it.unitn.disi.ds1.message.op.read.ReadResultCoordinatorMessage;
+import it.unitn.disi.ds1.message.op.read.TxnReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.write.WriteCoordinatorMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecisionMessage;
@@ -243,9 +243,9 @@ public final class DataStore extends Actor {
         });
 
         // Respond to Coordinator with Item
-        final ReadResultCoordinatorMessage outMessage = new ReadResultCoordinatorMessage(id, message.transactionId, message.key, itemInWorkspace.value);
+        final TxnReadResultCoordinatorMessage outMessage = new TxnReadResultCoordinatorMessage(id, message.transactionId, message.key, itemInWorkspace.value);
         getSender().tell(outMessage, getSelf());
-        LOGGER.debug("DataStore {} send to Coordinator {} ReadResultCoordinatorMessage: {}", id, message.coordinatorId, outMessage);
+        LOGGER.debug("DataStore {} send to Coordinator {} TxnReadResultCoordinatorMessage: {}", id, message.coordinatorId, outMessage);
     }
 
     /**

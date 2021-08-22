@@ -14,7 +14,7 @@ import it.unitn.disi.ds1.message.txn.TxnResultMessage;
 import it.unitn.disi.ds1.message.op.read.TxnReadResultMessage;
 import it.unitn.disi.ds1.message.op.read.TxnReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.read.TxnReadMessage;
-import it.unitn.disi.ds1.message.op.read.ReadResultCoordinatorMessage;
+import it.unitn.disi.ds1.message.op.read.TxnReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.write.WriteCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.write.WriteMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcVoteRequestMessage;
@@ -101,7 +101,7 @@ public final class Coordinator extends Actor {
                 .match(CoordinatorWelcomeMessage.class, this::onCoordinatorWelcomeMessage)
                 .match(TxnBeginMessage.class, this::onTxnBeginMessage)
                 .match(TxnReadMessage.class, this::onTxnReadMessage)
-                .match(ReadResultCoordinatorMessage.class, this::onReadResultCoordinatorMessage)
+                .match(TxnReadResultCoordinatorMessage.class, this::onTxnReadResultCoordinatorMessage)
                 .match(WriteMessage.class, this::onWriteMessage)
                 .match(TxnEndMessage.class, this::onTxnEndMessage)
                 .match(TwoPcVoteResponseMessage.class, this::onTwoPcVoteResponseMessage)
@@ -247,12 +247,12 @@ public final class Coordinator extends Actor {
     }
 
     /**
-     * Callback for {@link ReadResultCoordinatorMessage} message.
+     * Callback for {@link TxnReadResultCoordinatorMessage} message.
      *
      * @param message Received message
      */
-    private void onReadResultCoordinatorMessage(ReadResultCoordinatorMessage message) {
-        LOGGER.debug("Coordinator {} received from DataStore {} ReadResultCoordinatorMessage: {}", id, message.dataStoreId, message);
+    private void onTxnReadResultCoordinatorMessage(TxnReadResultCoordinatorMessage message) {
+        LOGGER.debug("Coordinator {} received from DataStore {} TxnReadResultCoordinatorMessage: {}", id, message.dataStoreId, message);
 
         // Obtain Client
         final ActorMetadata client = transactionIdToClient.get(message.transactionId);

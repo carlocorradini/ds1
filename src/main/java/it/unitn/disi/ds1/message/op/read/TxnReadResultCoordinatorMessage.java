@@ -14,7 +14,7 @@ import java.io.Serializable;
  * from {@link it.unitn.disi.ds1.actor.DataStore} to {@link it.unitn.disi.ds1.actor.Coordinator}
  * having the value of the corresponding key of the {@link Item}.
  */
-public final class ReadResultCoordinatorMessage extends TxnMessage implements Serializable {
+public final class TxnReadResultCoordinatorMessage extends TxnMessage implements Serializable {
     private static final long serialVersionUID = 2418188472950018347L;
 
     /**
@@ -36,14 +36,14 @@ public final class ReadResultCoordinatorMessage extends TxnMessage implements Se
     public final int value;
 
     /**
-     * Construct a new ReadResultCoordinatorMessage class.
+     * Construct a new TxnReadResultCoordinatorMessage class.
      *
      * @param dataStoreId   DataStore id
      * @param transactionId Transaction id
      * @param key           Item key
      * @param value         Item value
      */
-    public ReadResultCoordinatorMessage(int dataStoreId, UUID transactionId, int key, int value) {
+    public TxnReadResultCoordinatorMessage(int dataStoreId, UUID transactionId, int key, int value) {
         super(transactionId);
         this.dataStoreId = dataStoreId;
         this.key = key;
