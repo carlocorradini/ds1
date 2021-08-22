@@ -226,7 +226,7 @@ public final class DataStore extends Actor {
      * @param message Received message
      */
     private void onTxnReadCoordinatorMessage(TxnReadCoordinatorMessage message) {
-        LOGGER.debug("DataStore {} received from Coordinator {} TxnReadCoordinatorMessage: {}", id, message.coordinatorId, message);
+        LOGGER.debug("DataStore {} received from Coordinator {} TxnReadCoordinatorMessage: {}", id, message.senderId, message);
 
         // Obtain private workspace, otherwise create
         final Map<Integer, Item> workspace = workspaces.computeIfAbsent(message.transactionId, k -> new HashMap<>());
@@ -245,7 +245,7 @@ public final class DataStore extends Actor {
         // Respond to Coordinator with Item
         final TxnReadResultCoordinatorMessage outMessage = new TxnReadResultCoordinatorMessage(id, message.transactionId, message.key, itemInWorkspace.value);
         getSender().tell(outMessage, getSelf());
-        LOGGER.debug("DataStore {} send to Coordinator {} TxnReadResultCoordinatorMessage: {}", id, message.coordinatorId, outMessage);
+        LOGGER.debug("DataStore {} send to Coordinator {} TxnReadResultCoordinatorMessage: {}", id, message.senderId, outMessage);
     }
 
     /**
@@ -254,7 +254,7 @@ public final class DataStore extends Actor {
      * @param message Received message
      */
     private void onTxnWriteCoordinatorMessage(TxnWriteCoordinatorMessage message) {
-        LOGGER.debug("DataStore {} received from Coordinator {} TxnWriteCoordinatorMessage: {}", id, message.coordinatorId, message);
+        LOGGER.debug("DataStore {} received from Coordinator {} TxnWriteCoordinatorMessage: {}", id, message.senderId, message);
 
         // Obtain private workspace, otherwise create
         final Map<Integer, Item> workspace = workspaces.computeIfAbsent(message.transactionId, k -> new HashMap<>());
@@ -275,7 +275,7 @@ public final class DataStore extends Actor {
      * @param message Received message
      */
     private void onTwoPcVoteRequestMessage(TwoPcVoteRequestMessage message) {
-        LOGGER.debug("DataStore {} received from Coordinator {} TwoPcVoteRequestMessage: {}", id, message.coordinatorId, message);
+        LOGGER.debug("DataStore {} received from Coordinator {} TwoPcVoteRequestMessage: {}", id, message.senderId, message);
 
         final boolean canCommit;
 
@@ -284,19 +284,19 @@ public final class DataStore extends Actor {
             case COMMIT: {
                 // Check if transaction can commit
                 canCommit = canCommit(message.transactionId);
-                LOGGER.debug("DataStore {} received COMMIT decision from Coordinator {} involving transaction {} and decision is {}", id, message.coordinatorId, message.transactionId, TwoPcDecision.valueOf(canCommit));
+                LOGGER.debug("DataStore {} received COMMIT decision from Coordinator {} involving transaction {} and decision is {}", id, message.senderId, message.transactionId, TwoPcDecision.valueOf(canCommit));
                 break;
             }
             case ABORT:
-                throw new IllegalStateException(String.format("DataStore %d received ABORT decision from Coordinator %d involving transaction %s", id, message.coordinatorId, message.transactionId));
+                throw new IllegalStateException(String.format("DataStore %d received ABORT decision from Coordinator %d involving transaction %s", id, message.senderId, message.transactionId));
             default:
-                throw new IllegalStateException(String.format("DataStore %d received UNKNOWN decision from Coordinator %d involving transaction %s", id, message.coordinatorId, message.transactionId));
+                throw new IllegalStateException(String.format("DataStore %d received UNKNOWN decision from Coordinator %d involving transaction %s", id, message.senderId, message.transactionId));
         }
 
         // Send response to Coordinator
         final TwoPcVoteResponseMessage outMessage = new TwoPcVoteResponseMessage(id, message.transactionId, TwoPcDecision.valueOf(canCommit));
         getSender().tell(outMessage, getSender());
-        LOGGER.debug("DataStore {} send to Coordinator {} TwoPcVoteResponseMessage: {}", id, message.coordinatorId, outMessage);
+        LOGGER.debug("DataStore {} send to Coordinator {} TwoPcVoteResponseMessage: {}", id, message.senderId, outMessage);
     }
 
     /**
@@ -305,7 +305,7 @@ public final class DataStore extends Actor {
      * @param message Received message
      */
     private void onTwoPcDecisionMessage(TwoPcDecisionMessage message) {
-        LOGGER.debug("DataStore {} received from Coordinator {} to {} TwoPcDecisionMessage: {}", id, message.coordinatorId, message.decision, message);
+        LOGGER.debug("DataStore {} received from Coordinator {} to {} TwoPcDecisionMessage: {}", id, message.senderId, message.decision, message);
 
         // If decision is to commit, let's commit
         if (message.decision == TwoPcDecision.COMMIT) {

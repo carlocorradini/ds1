@@ -17,12 +17,6 @@ public final class TxnWriteCoordinatorMessage extends TxnMessage implements Seri
     private static final long serialVersionUID = -4823398098700891377L;
 
     /**
-     * Coordinator id.
-     */
-    @Expose
-    public final int coordinatorId;
-
-    /**
      * {@link Item} key to write.
      */
     @Expose
@@ -43,8 +37,7 @@ public final class TxnWriteCoordinatorMessage extends TxnMessage implements Seri
      * @param value         Item new value to write
      */
     public TxnWriteCoordinatorMessage(int coordinatorId, UUID transactionId, int key, int value) {
-        super(transactionId);
-        this.coordinatorId = coordinatorId;
+        super(coordinatorId, transactionId);
         this.key = key;
         this.value = value;
     }

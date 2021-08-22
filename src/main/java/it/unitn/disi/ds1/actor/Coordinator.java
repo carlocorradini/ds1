@@ -157,7 +157,7 @@ public final class Coordinator extends Actor {
 
         // Communicate commit decision to Client
         final ActorMetadata client = transactionIdToClient.get(transactionId);
-        final TxnEndResultMessage outMessageToClient = new TxnEndResultMessage(decision);
+        final TxnEndResultMessage outMessageToClient = new TxnEndResultMessage(id, decision);
         client.ref.tell(outMessageToClient, getSender());
         LOGGER.debug("Coordinator {} send to Client {} that transaction {} is {} TxnEndResultMessage: {}", id, client.id, transactionId, decision, outMessageToClient);
 
@@ -200,22 +200,22 @@ public final class Coordinator extends Actor {
      * @param message Received message
      */
     private void onTxnBeginMessage(TxnBeginMessage message) {
-        LOGGER.debug("Coordinator {} received from Client {} TxnBeginMessage: {}", id, message.clientId, message);
+        LOGGER.debug("Coordinator {} received from Client {} TxnBeginMessage: {}", id, message.senderId, message);
 
         // Check if Client has already a transaction running
-        final UUID transactionIdRunning = clientIdToTransactionId.get(message.clientId);
+        final UUID transactionIdRunning = clientIdToTransactionId.get(message.senderId);
         if (transactionIdRunning != null)
-            throw new IllegalStateException(String.format("Coordinator %d received a TxnBeginMessage from Client %d when transaction %s is running", id, message.clientId, transactionIdRunning));
+            throw new IllegalStateException(String.format("Coordinator %d received a TxnBeginMessage from Client %d when transaction %s is running", id, message.senderId, transactionIdRunning));
 
         // Generate a transaction id and store all relevant data
         final UUID transactionId = UUID.randomUUID();
-        clientIdToTransactionId.put(message.clientId, transactionId);
-        transactionIdToClient.put(transactionId, ActorMetadata.of(message.clientId, getSender()));
+        clientIdToTransactionId.put(message.senderId, transactionId);
+        transactionIdToClient.put(transactionId, ActorMetadata.of(message.senderId, getSender()));
 
         // Inform Client that the transaction has been accepted
-        final TxnAcceptMessage outMessage = new TxnAcceptMessage();
+        final TxnAcceptMessage outMessage = new TxnAcceptMessage(id);
         getSender().tell(outMessage, getSelf());
-        LOGGER.debug("Coordinator {} send to Client {} involving transaction transactionId {} TxnAcceptMessage: {}", id, message.clientId, transactionId, outMessage);
+        LOGGER.debug("Coordinator {} send to Client {} involving transaction transactionId {} TxnAcceptMessage: {}", id, message.senderId, transactionId, outMessage);
     }
 
     /**
@@ -224,13 +224,13 @@ public final class Coordinator extends Actor {
      * @param message Received message
      */
     private void onTxnReadMessage(TxnReadMessage message) {
-        LOGGER.debug("Coordinator {} received from Client {} TxnReadMessage: {}", id, message.clientId, message);
+        LOGGER.debug("Coordinator {} received from Client {} TxnReadMessage: {}", id, message.senderId, message);
 
         // Obtain correct DataStore
         final ActorMetadata dataStore = dataStoreByItemKey(message.key);
 
         // Obtain transaction id
-        final UUID transactionId = clientIdToTransactionId.get(message.clientId);
+        final UUID transactionId = clientIdToTransactionId.get(message.senderId);
 
         // Add DataStore to affected in transaction
         final Set<ActorMetadata> dataStoresAffected = dataStoresAffectedInTransaction.computeIfAbsent(transactionId, k -> new HashSet<>());
@@ -252,13 +252,13 @@ public final class Coordinator extends Actor {
      * @param message Received message
      */
     private void onTxnReadResultCoordinatorMessage(TxnReadResultCoordinatorMessage message) {
-        LOGGER.debug("Coordinator {} received from DataStore {} TxnReadResultCoordinatorMessage: {}", id, message.dataStoreId, message);
+        LOGGER.debug("Coordinator {} received from DataStore {} TxnReadResultCoordinatorMessage: {}", id, message.senderId, message);
 
         // Obtain Client
         final ActorMetadata client = transactionIdToClient.get(message.transactionId);
 
         // Send to Client Item read reply message
-        final TxnReadResultMessage outMessage = new TxnReadResultMessage(message.key, message.value);
+        final TxnReadResultMessage outMessage = new TxnReadResultMessage(id, message.key, message.value);
         client.ref.tell(outMessage, getSelf());
         LOGGER.debug("Coordinator {} send to Client {} TxnReadResultMessage: {}", id, client.id, outMessage);
     }
@@ -269,13 +269,13 @@ public final class Coordinator extends Actor {
      * @param message Received message
      */
     private void onTxnWriteMessage(TxnWriteMessage message) {
-        LOGGER.debug("Coordinator {} received from Client {} TxnWriteMessage: {}", id, message.clientId, message);
+        LOGGER.debug("Coordinator {} received from Client {} TxnWriteMessage: {}", id, message.senderId, message);
 
         // Obtain correct DataStore
         final ActorMetadata dataStore = dataStoreByItemKey(message.key);
 
         // Obtain transaction id
-        final UUID transactionId = clientIdToTransactionId.get(message.clientId);
+        final UUID transactionId = clientIdToTransactionId.get(message.senderId);
 
         // Add DataStore to affected in transaction
         final Set<ActorMetadata> dataStoresAffected = dataStoresAffectedInTransaction.computeIfAbsent(transactionId, k -> new HashSet<>());
@@ -297,16 +297,16 @@ public final class Coordinator extends Actor {
      * @param message Received message
      */
     private void onTxnEndMessage(TxnEndMessage message) {
-        LOGGER.debug("Coordinator {} received from Client {} TxnEndMessage {}", id, message.clientId, message);
+        LOGGER.debug("Coordinator {} received from Client {} TxnEndMessage {}", id, message.senderId, message);
 
         // Obtain transaction id
-        final UUID transactionId = clientIdToTransactionId.get(message.clientId);
+        final UUID transactionId = clientIdToTransactionId.get(message.senderId);
 
         // Check Client decision
         switch (message.decision) {
             case COMMIT: {
                 // Client decided to commit
-                LOGGER.info("Coordinator {} informed that Client {} want to COMMIT transaction {}", id, message.clientId, transactionId);
+                LOGGER.info("Coordinator {} informed that Client {} want to COMMIT transaction {}", id, message.senderId, transactionId);
                 // Obtain affected DataStore(s) in transaction
                 final Set<ActorMetadata> affectedDataStores = dataStoresAffectedInTransaction.getOrDefault(transactionId, new HashSet<>());
                 // Check if there is at least one affected DataStore
@@ -327,7 +327,7 @@ public final class Coordinator extends Actor {
             }
             case ABORT: {
                 // Client decided to abort
-                LOGGER.info("Coordinator {} informed that Client {} want to ABORT transaction {}", id, message.clientId, transactionId);
+                LOGGER.info("Coordinator {} informed that Client {} want to ABORT transaction {}", id, message.senderId, transactionId);
                 terminateTransaction(transactionId, TwoPcDecision.ABORT);
                 break;
             }
@@ -340,12 +340,12 @@ public final class Coordinator extends Actor {
      * @param message Received message
      */
     private void onTwoPcVoteResponseMessage(TwoPcVoteResponseMessage message) {
-        LOGGER.debug("Coordinator {} received from DataStore {} TwoPcVoteResponseMessage: {}", id, message.dataStoreId, message);
+        LOGGER.debug("Coordinator {} received from DataStore {} TwoPcVoteResponseMessage: {}", id, message.senderId, message);
 
         // Obtain or create DataStore(s) decisions
         final Set<DataStoreDecision> decisions = transactionDecisions.computeIfAbsent(message.transactionId, k -> new HashSet<>());
         // Add decision of the DataStore
-        decisions.add(DataStoreDecision.of(message.dataStoreId, message.decision));
+        decisions.add(DataStoreDecision.of(message.senderId, message.decision));
 
         // Data stores affected in current transaction
         final Set<ActorMetadata> affectedDataStores = dataStoresAffectedInTransaction.getOrDefault(message.transactionId, new HashSet<>());
@@ -393,7 +393,7 @@ public final class Coordinator extends Actor {
      * @param message Received message
      */
     private void onSnapshotResultMessage(SnapshotResultMessage message) {
-        LOGGER.debug("Coordinator {} received from DataStore {} SnapshotResultMessage: {}", id, message.dataStoreId, message);
+        LOGGER.debug("Coordinator {} received from DataStore {} SnapshotResultMessage: {}", id, message.senderId, message);
 
         // Add received snapshot to saved snapshot
         snapshot.putAll(message.storage);

@@ -2,6 +2,7 @@ package it.unitn.disi.ds1.message.txn.read;
 
 import com.google.gson.annotations.Expose;
 import it.unitn.disi.ds1.etc.Item;
+import it.unitn.disi.ds1.message.Message;
 import it.unitn.disi.ds1.util.JsonUtil;
 
 import java.io.Serializable;
@@ -10,14 +11,8 @@ import java.io.Serializable;
  * Read request message
  * from {@link it.unitn.disi.ds1.actor.Client} to {@link it.unitn.disi.ds1.actor.Coordinator}.
  */
-public final class TxnReadMessage implements Serializable {
+public final class TxnReadMessage extends Message implements Serializable {
     private static final long serialVersionUID = 278859909154339067L;
-
-    /**
-     * {@link it.unitn.disi.ds1.actor.Client} id.
-     */
-    @Expose
-    public final int clientId;
 
     /**
      * {@link Item} key to read.
@@ -28,11 +23,11 @@ public final class TxnReadMessage implements Serializable {
     /**
      * Construct a new TxnReadMessage class.
      *
-     * @param clientId      Client id
-     * @param key           Item key to read
+     * @param clientId Client id
+     * @param key      Item key to read
      */
     public TxnReadMessage(int clientId, int key) {
-        this.clientId = clientId;
+        super(clientId);
         this.key = key;
     }
 

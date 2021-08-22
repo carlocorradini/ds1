@@ -17,12 +17,6 @@ public final class TxnReadCoordinatorMessage extends TxnMessage implements Seria
     private static final long serialVersionUID = 4166460770428474735L;
 
     /**
-     * Coordinator id.
-     */
-    @Expose
-    public final int coordinatorId;
-
-    /**
      * {@link Item} key to read.
      */
     @Expose
@@ -31,13 +25,12 @@ public final class TxnReadCoordinatorMessage extends TxnMessage implements Seria
     /**
      * Construct a new TxnReadCoordinatorMessage class.
      *
-     * @param coordinatorId Coordinator id
+     * @param coordinatorId {@link it.unitn.disi.ds1.actor.Coordinator} id
      * @param transactionId Transaction id
      * @param key           Item key to read
      */
     public TxnReadCoordinatorMessage(int coordinatorId, UUID transactionId, int key) {
-        super(transactionId);
-        this.coordinatorId = coordinatorId;
+        super(coordinatorId, transactionId);
         this.key = key;
     }
 

@@ -1,6 +1,5 @@
 package it.unitn.disi.ds1.message.pc.two;
 
-import com.google.gson.annotations.Expose;
 import it.unitn.disi.ds1.util.JsonUtil;
 
 import java.io.Serializable;
@@ -14,12 +13,6 @@ public final class TwoPcVoteRequestMessage extends TwoPcMessage implements Seria
     private static final long serialVersionUID = 6797846417399441318L;
 
     /**
-     * {@link it.unitn.disi.ds1.actor.Coordinator} id.
-     */
-    @Expose
-    public final int coordinatorId;
-
-    /**
      * Construct a new TwoPcVoteRequestMessage class.
      *
      * @param coordinatorId Coordinator id
@@ -27,8 +20,7 @@ public final class TwoPcVoteRequestMessage extends TwoPcMessage implements Seria
      * @param decision      Decision
      */
     public TwoPcVoteRequestMessage(int coordinatorId, UUID transactionId, TwoPcDecision decision) {
-        super(transactionId, decision);
-        this.coordinatorId = coordinatorId;
+        super(coordinatorId, transactionId, decision);
     }
 
     @Override

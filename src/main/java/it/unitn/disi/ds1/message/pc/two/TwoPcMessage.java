@@ -22,11 +22,12 @@ public abstract class TwoPcMessage extends TxnMessage implements Serializable {
     /**
      * Construct a new TwoPCMessage class.
      *
+     * @param senderId      {@link it.unitn.disi.ds1.actor.Actor Sender} id
      * @param transactionId Transaction id
      * @param decision      Decision
      */
-    public TwoPcMessage(UUID transactionId, TwoPcDecision decision) {
-        super(transactionId);
+    public TwoPcMessage(int senderId, UUID transactionId, TwoPcDecision decision) {
+        super(senderId, transactionId);
         this.decision = decision;
     }
 

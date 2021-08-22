@@ -1,6 +1,7 @@
 package it.unitn.disi.ds1.message.txn;
 
 import com.google.gson.annotations.Expose;
+import it.unitn.disi.ds1.message.Message;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 import it.unitn.disi.ds1.util.JsonUtil;
 
@@ -10,7 +11,7 @@ import java.io.Serializable;
  * Message from {@link it.unitn.disi.ds1.actor.Coordinator} to {@link it.unitn.disi.ds1.actor.Client}
  * with outcome of transaction.
  */
-public final class TxnEndResultMessage implements Serializable {
+public final class TxnEndResultMessage extends Message implements Serializable {
     private static final long serialVersionUID = -8747449002189796637L;
 
     /**
@@ -22,9 +23,11 @@ public final class TxnEndResultMessage implements Serializable {
     /**
      * Construct a new TxnEndResultMessage class.
      *
-     * @param decision Decision
+     * @param coordinatorId {@link it.unitn.disi.ds1.actor.Coordinator} id
+     * @param decision      Decision
      */
-    public TxnEndResultMessage(TwoPcDecision decision) {
+    public TxnEndResultMessage(int coordinatorId, TwoPcDecision decision) {
+        super(coordinatorId);
         this.decision = decision;
     }
 

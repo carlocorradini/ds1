@@ -1,6 +1,7 @@
 package it.unitn.disi.ds1.message.snapshot;
 
 import com.google.gson.annotations.Expose;
+import it.unitn.disi.ds1.message.Message;
 import it.unitn.disi.ds1.util.JsonUtil;
 
 import java.io.Serializable;
@@ -10,14 +11,8 @@ import java.io.Serializable;
  * from Main to {@link it.unitn.disi.ds1.actor.Coordinator}
  * or from {@link it.unitn.disi.ds1.actor.Coordinator} to {@link it.unitn.disi.ds1.actor.DataStore}.
  */
-public final class SnapshotMessage implements Serializable {
+public final class SnapshotMessage extends Message implements Serializable {
     private static final long serialVersionUID = 5081090567329182418L;
-
-    /**
-     * Sender {@link it.unitn.disi.ds1.actor.Actor} id.
-     */
-    @Expose
-    public final int senderId;
 
     /**
      * Snapshot id.
@@ -32,7 +27,7 @@ public final class SnapshotMessage implements Serializable {
      * @param snapshotId Snapshot id
      */
     public SnapshotMessage(int senderId, int snapshotId) {
-        this.senderId = senderId;
+        super(senderId);
         this.snapshotId = snapshotId;
     }
 

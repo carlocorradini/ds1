@@ -18,12 +18,6 @@ public final class TxnReadResultCoordinatorMessage extends TxnMessage implements
     private static final long serialVersionUID = 2418188472950018347L;
 
     /**
-     * {@link it.unitn.disi.ds1.actor.DataStore} id.
-     */
-    @Expose
-    public final int dataStoreId;
-
-    /**
      * {@link Item} key.
      */
     @Expose
@@ -44,8 +38,7 @@ public final class TxnReadResultCoordinatorMessage extends TxnMessage implements
      * @param value         Item value
      */
     public TxnReadResultCoordinatorMessage(int dataStoreId, UUID transactionId, int key, int value) {
-        super(transactionId);
-        this.dataStoreId = dataStoreId;
+        super(dataStoreId, transactionId);
         this.key = key;
         this.value = value;
     }
