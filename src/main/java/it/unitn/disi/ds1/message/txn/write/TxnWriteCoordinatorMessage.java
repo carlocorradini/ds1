@@ -10,7 +10,7 @@ import java.util.UUID;
 import java.io.Serializable;
 
 /**
- * Write request message
+ * Write message
  * from {@link it.unitn.disi.ds1.actor.Coordinator} to {@link it.unitn.disi.ds1.actor.DataStore}.
  */
 public final class TxnWriteCoordinatorMessage extends TxnMessage implements Serializable {

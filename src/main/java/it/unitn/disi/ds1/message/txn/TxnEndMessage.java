@@ -8,7 +8,9 @@ import it.unitn.disi.ds1.util.JsonUtil;
 import java.io.Serializable;
 
 /**
- * Transaction end message.
+ * Transaction end message
+ * from {@link it.unitn.disi.ds1.actor.Client} to {@link it.unitn.disi.ds1.actor.Coordinator}
+ * asking to terminate the transaction.
  */
 public final class TxnEndMessage extends Message implements Serializable {
     private static final long serialVersionUID = -7119663856673239183L;

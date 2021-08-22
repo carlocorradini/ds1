@@ -8,7 +8,7 @@ import java.io.Serializable;
 
 /**
  * Snapshot request message
- * from Main to {@link it.unitn.disi.ds1.actor.Coordinator}
+ * from {@link it.unitn.disi.ds1.Main} to {@link it.unitn.disi.ds1.actor.Coordinator}
  * or from {@link it.unitn.disi.ds1.actor.Coordinator} to {@link it.unitn.disi.ds1.actor.DataStore}.
  */
 public final class SnapshotMessage extends Message implements Serializable {

@@ -7,8 +7,9 @@ import java.io.Serializable;
 import java.util.UUID;
 
 /**
- * Reply from {@link it.unitn.disi.ds1.actor.DataStore} to {@link it.unitn.disi.ds1.actor.Coordinator}
- * with Yes or No decision for committing
+ * Reply message to {@link TwoPcVoteMessage}
+ * from {@link it.unitn.disi.ds1.actor.DataStore} to {@link it.unitn.disi.ds1.actor.Coordinator}
+ * with the {@link Decision decision}.
  */
 public final class TwoPcVoteResultMessage extends TwoPcMessage implements Serializable {
     private static final long serialVersionUID = 4917833122149828262L;

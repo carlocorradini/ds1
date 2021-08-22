@@ -8,7 +8,7 @@ import it.unitn.disi.ds1.util.JsonUtil;
 import java.io.Serializable;
 
 /**
- * Read request message
+ * Read message
  * from {@link it.unitn.disi.ds1.actor.Client} to {@link it.unitn.disi.ds1.actor.Coordinator}.
  */
 public final class TxnReadMessage extends Message implements Serializable {

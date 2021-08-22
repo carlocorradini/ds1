@@ -10,7 +10,7 @@ import java.util.UUID;
 import java.io.Serializable;
 
 /**
- * Read request message
+ * Read message
  * from {@link it.unitn.disi.ds1.actor.Coordinator} to {@link it.unitn.disi.ds1.actor.DataStore}.
  */
 public final class TxnReadCoordinatorMessage extends TxnMessage implements Serializable {

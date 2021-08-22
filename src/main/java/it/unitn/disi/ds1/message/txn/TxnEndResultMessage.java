@@ -8,8 +8,9 @@ import it.unitn.disi.ds1.util.JsonUtil;
 import java.io.Serializable;
 
 /**
- * Message from {@link it.unitn.disi.ds1.actor.Coordinator} to {@link it.unitn.disi.ds1.actor.Client}
- * with outcome of transaction.
+ * Reply message to {@link TxnEndMessage}
+ * from {@link it.unitn.disi.ds1.actor.Coordinator} to {@link it.unitn.disi.ds1.actor.Client}
+ * with final transaction {@link Decision decisionF}.
  */
 public final class TxnEndResultMessage extends Message implements Serializable {
     private static final long serialVersionUID = -8747449002189796637L;

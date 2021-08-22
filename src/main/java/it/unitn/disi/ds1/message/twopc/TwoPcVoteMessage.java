@@ -8,7 +8,7 @@ import java.util.UUID;
 
 /**
  * Message from {@link it.unitn.disi.ds1.actor.Coordinator} to {@link it.unitn.disi.ds1.actor.DataStore}
- * asking if {@link it.unitn.disi.ds1.actor.DataStore} is able to commit or not
+ * asking if {@link it.unitn.disi.ds1.actor.DataStore} is able to COMMIT.
  */
 public final class TwoPcVoteMessage extends TwoPcMessage implements Serializable {
     private static final long serialVersionUID = 6797846417399441318L;

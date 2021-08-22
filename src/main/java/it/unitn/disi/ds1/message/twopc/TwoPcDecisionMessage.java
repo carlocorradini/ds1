@@ -8,7 +8,7 @@ import java.util.UUID;
 
 /**
  * Message from {@link it.unitn.disi.ds1.actor.Coordinator} to {@link it.unitn.disi.ds1.actor.DataStore}
- * to communicate Commit or Abort decision
+ * to communicate the {@link it.unitn.disi.ds1.actor.Coordinator} final {@link Decision decision}.
  */
 public final class TwoPcDecisionMessage extends TwoPcMessage implements Serializable {
     private static final long serialVersionUID = 5152544683185426862L;

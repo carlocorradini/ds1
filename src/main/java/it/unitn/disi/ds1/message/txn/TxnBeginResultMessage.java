@@ -6,8 +6,9 @@ import it.unitn.disi.ds1.util.JsonUtil;
 import java.io.Serializable;
 
 /**
- * Reply message to {@link TxnBeginMessage} informing that the transaction
- * has been correctly accepted.
+ * Reply message to {@link TxnBeginMessage}
+ * from {@link it.unitn.disi.ds1.actor.Coordinator} to {@link it.unitn.disi.ds1.actor.Client}
+ * informing that the transaction is accepted (assumption).
  */
 public final class TxnBeginResultMessage extends Message implements Serializable {
     private static final long serialVersionUID = -6339782978102970100L;
