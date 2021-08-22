@@ -2,7 +2,7 @@ package it.unitn.disi.ds1.message.txn;
 
 import com.google.gson.annotations.Expose;
 import it.unitn.disi.ds1.message.Message;
-import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
+import it.unitn.disi.ds1.etc.Decision;
 import it.unitn.disi.ds1.util.JsonUtil;
 
 import java.io.Serializable;
@@ -18,7 +18,7 @@ public final class TxnEndResultMessage extends Message implements Serializable {
      * Decision made.
      */
     @Expose
-    public final TwoPcDecision decision;
+    public final Decision decision;
 
     /**
      * Construct a new TxnEndResultMessage class.
@@ -26,7 +26,7 @@ public final class TxnEndResultMessage extends Message implements Serializable {
      * @param coordinatorId {@link it.unitn.disi.ds1.actor.Coordinator} id
      * @param decision      Decision
      */
-    public TxnEndResultMessage(int coordinatorId, TwoPcDecision decision) {
+    public TxnEndResultMessage(int coordinatorId, Decision decision) {
         super(coordinatorId);
         this.decision = decision;
     }

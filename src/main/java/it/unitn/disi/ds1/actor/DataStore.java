@@ -6,7 +6,7 @@ import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.message.txn.read.TxnReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.txn.read.TxnReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.txn.write.TxnWriteCoordinatorMessage;
-import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
+import it.unitn.disi.ds1.etc.Decision;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecisionMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcVoteRequestMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcVoteResponseMessage;
@@ -284,7 +284,7 @@ public final class DataStore extends Actor {
             case COMMIT: {
                 // Check if transaction can commit
                 canCommit = canCommit(message.transactionId);
-                LOGGER.debug("DataStore {} received COMMIT decision from Coordinator {} involving transaction {} and decision is {}", id, message.senderId, message.transactionId, TwoPcDecision.valueOf(canCommit));
+                LOGGER.debug("DataStore {} received COMMIT decision from Coordinator {} involving transaction {} and decision is {}", id, message.senderId, message.transactionId, Decision.valueOf(canCommit));
                 break;
             }
             case ABORT:
@@ -294,7 +294,7 @@ public final class DataStore extends Actor {
         }
 
         // Send response to Coordinator
-        final TwoPcVoteResponseMessage outMessage = new TwoPcVoteResponseMessage(id, message.transactionId, TwoPcDecision.valueOf(canCommit));
+        final TwoPcVoteResponseMessage outMessage = new TwoPcVoteResponseMessage(id, message.transactionId, Decision.valueOf(canCommit));
         getSender().tell(outMessage, getSender());
         LOGGER.debug("DataStore {} send to Coordinator {} TwoPcVoteResponseMessage: {}", id, message.senderId, outMessage);
     }
@@ -308,7 +308,7 @@ public final class DataStore extends Actor {
         LOGGER.debug("DataStore {} received from Coordinator {} to {} TwoPcDecisionMessage: {}", id, message.senderId, message.decision, message);
 
         // If decision is to commit, let's commit
-        if (message.decision == TwoPcDecision.COMMIT) {
+        if (message.decision == Decision.COMMIT) {
             synchronized (this) {
                 // Obtain private workspace of the transaction
                 final Map<Integer, Item> workspace = workspaces.get(message.transactionId);

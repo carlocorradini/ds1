@@ -1,6 +1,7 @@
 package it.unitn.disi.ds1.message.pc.two;
 
 import com.google.gson.annotations.Expose;
+import it.unitn.disi.ds1.etc.Decision;
 import it.unitn.disi.ds1.message.txn.TxnMessage;
 import it.unitn.disi.ds1.util.JsonUtil;
 
@@ -17,7 +18,7 @@ public abstract class TwoPcMessage extends TxnMessage implements Serializable {
      * Decision made.
      */
     @Expose
-    public final TwoPcDecision decision;
+    public final Decision decision;
 
     /**
      * Construct a new TwoPCMessage class.
@@ -26,7 +27,7 @@ public abstract class TwoPcMessage extends TxnMessage implements Serializable {
      * @param transactionId Transaction id
      * @param decision      Decision
      */
-    public TwoPcMessage(int senderId, UUID transactionId, TwoPcDecision decision) {
+    public TwoPcMessage(int senderId, UUID transactionId, Decision decision) {
         super(senderId, transactionId);
         this.decision = decision;
     }

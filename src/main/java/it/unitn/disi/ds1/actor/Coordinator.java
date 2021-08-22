@@ -4,7 +4,7 @@ import akka.actor.Props;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.DataStoreDecision;
 import it.unitn.disi.ds1.etc.Item;
-import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
+import it.unitn.disi.ds1.etc.Decision;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecisionMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcVoteResponseMessage;
 import it.unitn.disi.ds1.message.snapshot.SnapshotMessage;
@@ -134,16 +134,16 @@ public final class Coordinator extends Actor {
      */
     private boolean canCommit(Set<DataStoreDecision> decisions) {
         return decisions.stream()
-                .allMatch(decision -> decision.decision == TwoPcDecision.COMMIT);
+                .allMatch(decision -> decision.decision == Decision.COMMIT);
     }
 
     /**
      * Terminate the {@link UUID transaction} with the chosen decision.
      *
      * @param transactionId {@link UUID Transaction} id
-     * @param decision      Final {@link TwoPcDecision decision}
+     * @param decision      Final {@link Decision decision}
      */
-    private void terminateTransaction(UUID transactionId, TwoPcDecision decision) {
+    private void terminateTransaction(UUID transactionId, Decision decision) {
         // Data stores affected in current transaction
         final Set<ActorMetadata> affectedDataStores = dataStoresAffectedInTransaction.getOrDefault(transactionId, new HashSet<>());
 
@@ -312,7 +312,7 @@ public final class Coordinator extends Actor {
                 // Check if there is at least one affected DataStore
                 if (!affectedDataStores.isEmpty()) {
                     // DataStore(s) affected
-                    final TwoPcVoteRequestMessage outMessage = new TwoPcVoteRequestMessage(id, transactionId, TwoPcDecision.COMMIT);
+                    final TwoPcVoteRequestMessage outMessage = new TwoPcVoteRequestMessage(id, transactionId, Decision.COMMIT);
                     affectedDataStores.forEach(dataStore -> {
                         dataStore.ref.tell(outMessage, getSelf());
                         LOGGER.trace("Coordinator {} send to affected DataStore {} if can COMMIT transaction {} TwoPcVoteRequestMessage: {}", id, dataStore.id, transactionId, outMessage);
@@ -321,14 +321,14 @@ public final class Coordinator extends Actor {
                 } else {
                     // No DataStore(s) affected
                     LOGGER.warn("Coordinator {} no DataStore(s) are affected in transaction {}", id, transactionId);
-                    terminateTransaction(transactionId, TwoPcDecision.COMMIT);
+                    terminateTransaction(transactionId, Decision.COMMIT);
                 }
                 break;
             }
             case ABORT: {
                 // Client decided to abort
                 LOGGER.info("Coordinator {} informed that Client {} want to ABORT transaction {}", id, message.senderId, transactionId);
-                terminateTransaction(transactionId, TwoPcDecision.ABORT);
+                terminateTransaction(transactionId, Decision.ABORT);
                 break;
             }
         }
@@ -352,14 +352,14 @@ public final class Coordinator extends Actor {
 
         // Check if the number of decisions has reached all affected DataStore(s)
         if (decisions.size() == affectedDataStores.size()) {
-            final TwoPcDecision decision;
+            final Decision decision;
 
             // Obtain final decision if commit or abort
             if (canCommit(decisions)) {
-                decision = TwoPcDecision.COMMIT;
+                decision = Decision.COMMIT;
                 LOGGER.info("Coordinator {} decided to commit transaction {}: {}", id, message.transactionId, decisions);
             } else {
-                decision = TwoPcDecision.ABORT;
+                decision = Decision.ABORT;
                 LOGGER.info("Coordinator {} decided to abort transaction {}: {}", id, message.transactionId, decisions);
             }
 

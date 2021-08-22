@@ -1,7 +1,6 @@
 package it.unitn.disi.ds1.etc;
 
 import com.google.gson.annotations.Expose;
-import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 import it.unitn.disi.ds1.util.JsonUtil;
 
 import java.io.Serializable;
@@ -23,7 +22,7 @@ public final class DataStoreDecision implements Serializable {
      * Decision made.
      */
     @Expose
-    public final TwoPcDecision decision;
+    public final Decision decision;
 
     /**
      * Construct a new DataStoreDecision class.
@@ -31,7 +30,7 @@ public final class DataStoreDecision implements Serializable {
      * @param id       DataStore id
      * @param decision Decision
      */
-    public DataStoreDecision(int id, TwoPcDecision decision) {
+    public DataStoreDecision(int id, Decision decision) {
         this.id = id;
         this.decision = decision;
     }
@@ -43,7 +42,7 @@ public final class DataStoreDecision implements Serializable {
      * @param decision Decision
      * @return DataStoreDecision instance
      */
-    public static DataStoreDecision of(int id, TwoPcDecision decision) {
+    public static DataStoreDecision of(int id, Decision decision) {
         return new DataStoreDecision(id, decision);
     }
 

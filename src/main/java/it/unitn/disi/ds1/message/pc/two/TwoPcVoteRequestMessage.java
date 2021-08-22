@@ -1,5 +1,6 @@
 package it.unitn.disi.ds1.message.pc.two;
 
+import it.unitn.disi.ds1.etc.Decision;
 import it.unitn.disi.ds1.util.JsonUtil;
 
 import java.io.Serializable;
@@ -19,7 +20,7 @@ public final class TwoPcVoteRequestMessage extends TwoPcMessage implements Seria
      * @param transactionId Transaction id
      * @param decision      Decision
      */
-    public TwoPcVoteRequestMessage(int coordinatorId, UUID transactionId, TwoPcDecision decision) {
+    public TwoPcVoteRequestMessage(int coordinatorId, UUID transactionId, Decision decision) {
         super(coordinatorId, transactionId, decision);
     }
 

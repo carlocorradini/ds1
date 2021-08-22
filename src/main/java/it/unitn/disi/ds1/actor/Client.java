@@ -10,7 +10,7 @@ import it.unitn.disi.ds1.message.*;
 import it.unitn.disi.ds1.message.txn.read.TxnReadMessage;
 import it.unitn.disi.ds1.message.txn.read.TxnReadResultMessage;
 import it.unitn.disi.ds1.message.txn.write.TxnWriteMessage;
-import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
+import it.unitn.disi.ds1.etc.Decision;
 import it.unitn.disi.ds1.message.txn.*;
 import it.unitn.disi.ds1.message.welcome.ClientWelcomeMessage;
 import org.apache.logging.log4j.LogManager;
@@ -262,7 +262,7 @@ public final class Client extends Actor {
      */
     private void endTxn() {
         final boolean commit = random.nextDouble() < COMMIT_PROBABILITY;
-        final TxnEndMessage outMessage = new TxnEndMessage(id, TwoPcDecision.valueOf(commit));
+        final TxnEndMessage outMessage = new TxnEndMessage(id, Decision.valueOf(commit));
 
         txnCoordinator.ref.tell(outMessage, getSelf());
         txnFirstValue = null;

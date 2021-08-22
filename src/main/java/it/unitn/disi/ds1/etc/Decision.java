@@ -1,9 +1,9 @@
-package it.unitn.disi.ds1.message.pc.two;
+package it.unitn.disi.ds1.etc;
 
 /**
- * 2PC available decisions.
+ * Decision class.
  */
-public enum TwoPcDecision {
+public enum Decision {
     /**
      * Commit.
      */
@@ -19,21 +19,21 @@ public enum TwoPcDecision {
     private final boolean decision;
 
     /**
-     * Construct a new TwoPcDecision class.
+     * Construct a new Decision class.
      *
      * @param decision Decision
      */
-    TwoPcDecision(boolean decision) {
+    Decision(boolean decision) {
         this.decision = decision;
     }
 
     /**
-     * Return {@link TwoPcDecision} given a boolean decision value.
+     * Return {@link Decision} given a boolean decision value.
      *
      * @param decision Boolean decision
-     * @return TwoPcDecision
+     * @return Decision instance
      */
-    public static TwoPcDecision valueOf(boolean decision) {
+    public static Decision valueOf(boolean decision) {
         return decision ? COMMIT : ABORT;
     }
 
