@@ -3,7 +3,7 @@ package it.unitn.disi.ds1.actor;
 import akka.actor.Props;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.Item;
-import it.unitn.disi.ds1.message.op.read.ReadCoordinatorMessage;
+import it.unitn.disi.ds1.message.op.read.TxnReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.read.ReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.write.WriteCoordinatorMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
@@ -90,7 +90,7 @@ public final class DataStore extends Actor {
     public Receive createReceive() {
         return receiveBuilder()
                 .match(DataStoreWelcomeMessage.class, this::onDataStoreWelcomeMessage)
-                .match(ReadCoordinatorMessage.class, this::onReadCoordinatorMessage)
+                .match(TxnReadCoordinatorMessage.class, this::onTxnReadCoordinatorMessage)
                 .match(WriteCoordinatorMessage.class, this::onWriteCoordinatorMessage)
                 .match(TwoPcVoteRequestMessage.class, this::onTwoPcVoteRequestMessage)
                 .match(TwoPcDecisionMessage.class, this::onTwoPcDecisionMessage)
@@ -221,12 +221,12 @@ public final class DataStore extends Actor {
     }
 
     /**
-     * Callback for {@link ReadCoordinatorMessage} message.
+     * Callback for {@link TxnReadCoordinatorMessage} message.
      *
      * @param message Received message
      */
-    private void onReadCoordinatorMessage(ReadCoordinatorMessage message) {
-        LOGGER.debug("DataStore {} received from Coordinator {} ReadCoordinatorMessage: {}", id, message.coordinatorId, message);
+    private void onTxnReadCoordinatorMessage(TxnReadCoordinatorMessage message) {
+        LOGGER.debug("DataStore {} received from Coordinator {} TxnReadCoordinatorMessage: {}", id, message.coordinatorId, message);
 
         // Obtain private workspace, otherwise create
         final Map<Integer, Item> workspace = workspaces.computeIfAbsent(message.transactionId, k -> new HashMap<>());

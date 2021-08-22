@@ -7,7 +7,7 @@ import it.unitn.disi.ds1.util.JsonUtil;
 import java.io.Serializable;
 
 /**
- * Reply message to {@link ReadCoordinatorMessage}
+ * Reply message to {@link TxnReadMessage}
  * from {@link it.unitn.disi.ds1.actor.Coordinator} to {@link it.unitn.disi.ds1.actor.Client}
  * having the value of the corresponding key of the {@link Item}
  */

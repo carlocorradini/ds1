@@ -10,7 +10,7 @@ import java.util.UUID;
 import java.io.Serializable;
 
 /**
- * Reply message to {@link ReadCoordinatorMessage}
+ * Reply message to {@link TxnReadCoordinatorMessage}
  * from {@link it.unitn.disi.ds1.actor.DataStore} to {@link it.unitn.disi.ds1.actor.Coordinator}
  * having the value of the corresponding key of the {@link Item}.
  */

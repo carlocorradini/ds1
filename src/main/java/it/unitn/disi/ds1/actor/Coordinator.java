@@ -12,7 +12,7 @@ import it.unitn.disi.ds1.message.snapshot.SnapshotResultMessage;
 import it.unitn.disi.ds1.message.txn.TxnEndMessage;
 import it.unitn.disi.ds1.message.txn.TxnResultMessage;
 import it.unitn.disi.ds1.message.op.read.TxnReadResultMessage;
-import it.unitn.disi.ds1.message.op.read.ReadCoordinatorMessage;
+import it.unitn.disi.ds1.message.op.read.TxnReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.read.TxnReadMessage;
 import it.unitn.disi.ds1.message.op.read.ReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.write.WriteCoordinatorMessage;
@@ -241,9 +241,9 @@ public final class Coordinator extends Actor {
         }
 
         // Send to DataStore Item read message
-        final ReadCoordinatorMessage outMessage = new ReadCoordinatorMessage(id, transactionId, message.key);
+        final TxnReadCoordinatorMessage outMessage = new TxnReadCoordinatorMessage(id, transactionId, message.key);
         dataStore.ref.tell(outMessage, getSelf());
-        LOGGER.debug("Coordinator {} send to DataStore {} ReadCoordinatorMessage: {}", id, dataStore.id, outMessage);
+        LOGGER.debug("Coordinator {} send to DataStore {} TxnReadCoordinatorMessage: {}", id, dataStore.id, outMessage);
     }
 
     /**
