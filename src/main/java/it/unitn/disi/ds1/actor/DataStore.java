@@ -111,15 +111,15 @@ public final class DataStore extends Actor {
      */
     private synchronized boolean canCommit(UUID transactionId) {
         if (!lockItems(transactionId)) {
-            LOGGER.debug("DataStore {} lock Item(s) in transaction {} has failed", id, transactionId);
+            LOGGER.warn("DataStore {} lock Item(s) in transaction {} has FAILED: {}", id, transactionId, JsonUtil.GSON.toJson(workspaces.get(transactionId)));
             return false;
         }
-        LOGGER.debug("DataStore {} lock Item(s) in transaction {} is successful", id, transactionId);
+        LOGGER.debug("DataStore {} lock Item(s) in transaction {} is SUCCESSFUL", id, transactionId);
         if (!checkItemsVersion(transactionId)) {
-            LOGGER.debug("DataStore {} check Item(s) version in transaction {} has failed", id, transactionId);
+            LOGGER.warn("DataStore {} check Item(s) version in transaction {} has FAILED: {}", id, transactionId, JsonUtil.GSON.toJson(workspaces.get(transactionId)));
             return false;
         }
-        LOGGER.debug("DataStore {} check Item(s) version in transaction {} is successful", id, transactionId);
+        LOGGER.debug("DataStore {} check Item(s) version in transaction {} is SUCCESSFUL", id, transactionId);
 
         // Able to commit
         LOGGER.debug("DataStore {} can successfully commit transaction {}", id, transactionId);
@@ -133,25 +133,32 @@ public final class DataStore extends Actor {
      * @return True if matched, false otherwise
      */
     private synchronized boolean checkItemsVersion(UUID transactionId) {
-        // Obtain private workspace of the transaction
-        final Map<Integer, Item> workspace = workspaces.get(transactionId);
-        if (workspace == null)
-            throw new NullPointerException(String.format("DataStore %d is unable to obtain workspace for transaction %s during checkItemsVersion", id, transactionId));
+        return workspaces.get(transactionId)
+                .entrySet().stream()
+                .allMatch((entry) -> {
+                    final Item itemInWorkSpace = entry.getValue();
+                    final Item itemInStorage = storage.get(entry.getKey());
 
-        return workspace.entrySet().stream().allMatch((entry) -> {
-            final Item itemInWorkSpace = entry.getValue();
-            final Item itemInStorage = storage.get(entry.getKey());
-
-            // FIXME Non so
-            switch (itemInWorkSpace.operation) {
-                case READ:
-                    return itemInWorkSpace.version == itemInStorage.version;
-                case WRITE:
-                    return itemInWorkSpace.version == itemInStorage.version + 1;
-                default:
-                    throw new IllegalStateException(String.format("DataStore %d has invalid Item %d operation value during checkItemsVersion in workspace %s: %s", id, entry.getKey(), transactionId, itemInWorkSpace));
-            }
-        });
+                    switch (itemInWorkSpace.operation) {
+                        case READ: {
+                            // Version & Value must be the same as storage
+                            final boolean check = itemInWorkSpace.version == itemInStorage.version
+                                    && itemInWorkSpace.value == itemInStorage.value;
+                            if (!check)
+                                LOGGER.debug("DataStore {} READ check for Item {} in transaction {} is INVALID", id, entry.getKey(), transactionId);
+                            return check;
+                        }
+                        case WRITE: {
+                            // Version must be only one more than storage
+                            final boolean check = itemInWorkSpace.version == itemInStorage.version + 1;
+                            if (!check)
+                                LOGGER.debug("DataStore {} WRITE check for Item {} in transaction {} is INVALID", id, entry.getKey(), transactionId);
+                            return check;
+                        }
+                        default:
+                            throw new IllegalStateException(String.format("DataStore %d has invalid Item %d operation value during checkItemsVersion in workspace %s: %s", id, entry.getKey(), transactionId, itemInWorkSpace));
+                    }
+                });
     }
 
     /**
@@ -163,8 +170,6 @@ public final class DataStore extends Actor {
     private synchronized boolean lockItems(UUID transactionId) {
         // Obtain private workspace of the transaction
         final Map<Integer, Item> workspace = workspaces.get(transactionId);
-        if (workspace == null)
-            throw new NullPointerException(String.format("DataStore %d is unable to obtain workspace for transaction %s during lockItems", id, transactionId));
 
         // Try to lock all Item(s) in storage involved in transaction
         final boolean locked = workspace.entrySet().stream()
@@ -182,12 +187,8 @@ public final class DataStore extends Actor {
      * @param transactionId {@link UUID Transaction} id
      */
     private synchronized void cleanLockItems(UUID transactionId) {
-        // Obtain private workspace of the transaction
-        final Map<Integer, Item> workspace = workspaces.get(transactionId);
-        if (workspace == null)
-            throw new NullPointerException(String.format("DataStore %d is unable to obtain workspace for transaction %s during cleanLockItems", id, transactionId));
-
-        workspace.forEach((key, value) -> storage.get(key).unlock(transactionId));
+        workspaces.get(transactionId)
+                .forEach((key, value) -> storage.get(key).unlock(transactionId));
     }
 
     /**
@@ -230,15 +231,16 @@ public final class DataStore extends Actor {
 
         // Obtain private workspace, otherwise create
         final Map<Integer, Item> workspace = workspaces.computeIfAbsent(message.transactionId, k -> new HashMap<>());
+
         // Obtain Item in storage
         final Item itemInStorage = storage.get(message.key);
-        // Add item to workspace, if not present present
-        // FIXME Non so
+
+        // Obtain Item in workspace, compute it if absent
         final Item itemInWorkspace = workspace.computeIfAbsent(message.key, k -> {
             final Item item = new Item.Builder(itemInStorage.value, itemInStorage.version)
                     .withOperation(Item.Operation.READ)
                     .build();
-            LOGGER.trace("DataStore {} ReadCoordinatorMessage item {} in transaction {} added to workspace: {}", id, message.key, message.transactionId, item);
+            LOGGER.trace("DataStore {} on READ added Item {} involving transaction {} to workspace: {}", id, message.key, message.transactionId, item);
             return item;
         });
 
@@ -258,15 +260,28 @@ public final class DataStore extends Actor {
 
         // Obtain private workspace, otherwise create
         final Map<Integer, Item> workspace = workspaces.computeIfAbsent(message.transactionId, k -> new HashMap<>());
+
         // Obtain Item in storage
         final Item itemInStorage = storage.get(message.key);
-        // Generate new Item for workspace
-        final Item newItem = new Item.Builder(message.value, itemInStorage.version + 1)
-                .withOperation(Item.Operation.WRITE)
-                .build();
-        // Add new Item to workspace
-        workspace.put(message.key, newItem);
-        LOGGER.trace("DataStore {} TxnWriteCoordinatorMessage item {} in transaction {} added to workspace: {}", id, message.key, message.transactionId, newItem);
+
+        // Compute Item in workspace
+        final Item itemInWorkspace = workspace.compute(message.key, (k, oldItemInWorkspace) -> {
+            // FIX Schifo da fixare
+            int newItemVersion = itemInStorage.version + 1;
+            if (oldItemInWorkspace != null && oldItemInWorkspace.operation == Item.Operation.WRITE) {
+                newItemVersion = oldItemInWorkspace.version;
+            } else if (oldItemInWorkspace != null && oldItemInWorkspace.operation == Item.Operation.READ) {
+                newItemVersion = oldItemInWorkspace.version + 1;
+            }
+
+            final Item item = new Item.Builder(message.value, newItemVersion)
+                    .withOperation(Item.Operation.WRITE)
+                    .build();
+            LOGGER.trace("DataStore {} on WRITE added Item {} involving transaction {} to workspace: {}", id, message.key, message.transactionId, item);
+            return item;
+        });
+
+        LOGGER.trace("DataStore {} TxnWriteCoordinatorMessage item {} in transaction {} added to workspace: {}", id, message.key, message.transactionId, itemInWorkspace);
     }
 
     /**
@@ -285,6 +300,11 @@ public final class DataStore extends Actor {
                 // Check if transaction can commit
                 canCommit = canCommit(message.transactionId);
                 LOGGER.debug("DataStore {} received COMMIT decision from Coordinator {} involving transaction {} and decision is {}", id, message.senderId, message.transactionId, Decision.valueOf(canCommit));
+
+                // Send response to Coordinator
+                final TwoPcVoteResultMessage outMessage = new TwoPcVoteResultMessage(id, message.transactionId, Decision.valueOf(canCommit));
+                getSender().tell(outMessage, getSender());
+                LOGGER.debug("DataStore {} send to Coordinator {} TwoPcVoteResultMessage: {}", id, message.senderId, outMessage);
                 break;
             }
             case ABORT:
@@ -292,11 +312,6 @@ public final class DataStore extends Actor {
             default:
                 throw new IllegalStateException(String.format("DataStore %d received UNKNOWN decision from Coordinator %d involving transaction %s", id, message.senderId, message.transactionId));
         }
-
-        // Send response to Coordinator
-        final TwoPcVoteResultMessage outMessage = new TwoPcVoteResultMessage(id, message.transactionId, Decision.valueOf(canCommit));
-        getSender().tell(outMessage, getSender());
-        LOGGER.debug("DataStore {} send to Coordinator {} TwoPcVoteResultMessage: {}", id, message.senderId, outMessage);
     }
 
     /**
@@ -312,8 +327,6 @@ public final class DataStore extends Actor {
             synchronized (this) {
                 // Obtain private workspace of the transaction
                 final Map<Integer, Item> workspace = workspaces.get(message.transactionId);
-                if (workspace == null)
-                    throw new NullPointerException(String.format("DataStore %d is unable to obtain workspace for transaction %s during onTwoPcDecisionMessage", id, message.transactionId));
                 // Commit
                 // FIXME Rimuovere operation
                 storage.putAll(workspaces.get(message.transactionId));

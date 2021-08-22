@@ -206,6 +206,7 @@ public final class Coordinator extends Actor {
         final UUID transactionId = UUID.randomUUID();
         clientIdToTransactionId.put(message.senderId, transactionId);
         transactionIdToClient.put(transactionId, ActorMetadata.of(message.senderId, getSender()));
+        dataStoresAffectedInTransaction.put(transactionId, new HashSet<>());
 
         // Inform Client that the transaction has been accepted
         final TxnBeginResultMessage outMessage = new TxnBeginResultMessage(id);
@@ -228,8 +229,7 @@ public final class Coordinator extends Actor {
         final ActorMetadata dataStore = dataStoreByItemKey(message.key);
 
         // Add DataStore to affected in transaction
-        final Set<ActorMetadata> dataStoresAffected = dataStoresAffectedInTransaction.computeIfAbsent(transactionId, k -> new HashSet<>());
-        if (dataStoresAffected.add(dataStore)) {
+        if (dataStoresAffectedInTransaction.get(transactionId).add(dataStore)) {
             LOGGER.trace("Coordinator {} add DataStore {} to affected DataStore(s) for transaction {}", id, dataStore.id, transactionId);
         } else {
             LOGGER.trace("Coordinator {} DataStore {} already present in affected DataStore(s) for transaction {}", id, dataStore.id, transactionId);
@@ -266,15 +266,14 @@ public final class Coordinator extends Actor {
     private void onTxnWriteMessage(TxnWriteMessage message) {
         LOGGER.debug("Coordinator {} received from Client {} TxnWriteMessage: {}", id, message.senderId, message);
 
-        // Obtain correct DataStore
-        final ActorMetadata dataStore = dataStoreByItemKey(message.key);
-
         // Obtain transaction id
         final UUID transactionId = clientIdToTransactionId.get(message.senderId);
 
+        // Obtain correct DataStore
+        final ActorMetadata dataStore = dataStoreByItemKey(message.key);
+
         // Add DataStore to affected in transaction
-        final Set<ActorMetadata> dataStoresAffected = dataStoresAffectedInTransaction.computeIfAbsent(transactionId, k -> new HashSet<>());
-        if (dataStoresAffected.add(dataStore)) {
+        if (dataStoresAffectedInTransaction.get(transactionId).add(dataStore)) {
             LOGGER.trace("Coordinator {} add DataStore {} to affected DataStore(s) for transaction {}", id, dataStore.id, transactionId);
         } else {
             LOGGER.trace("Coordinator {} DataStore {} already present in affected DataStore(s) for transaction {}", id, dataStore.id, transactionId);
