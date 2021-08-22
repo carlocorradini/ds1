@@ -9,7 +9,7 @@ import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.message.*;
 import it.unitn.disi.ds1.message.op.read.TxnReadMessage;
 import it.unitn.disi.ds1.message.op.read.TxnReadResultMessage;
-import it.unitn.disi.ds1.message.op.write.WriteMessage;
+import it.unitn.disi.ds1.message.op.write.TxnWriteMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 import it.unitn.disi.ds1.message.txn.*;
 import it.unitn.disi.ds1.message.welcome.ClientWelcomeMessage;
@@ -219,12 +219,12 @@ public final class Client extends Actor {
         // Read request 1
         final TxnReadMessage outFirstMessage = new TxnReadMessage(id, txnFirstKey);
         txnCoordinator.ref.tell(outFirstMessage, getSelf());
-        LOGGER.debug("Client {} send to Coordinator {} ReadMessage: {}", id, txnCoordinator.id, outFirstMessage);
+        LOGGER.debug("Client {} send to Coordinator {} TxnReadMessage: {}", id, txnCoordinator.id, outFirstMessage);
 
         // Read request 2
         final TxnReadMessage outSecondMessage = new TxnReadMessage(id, txnSecondKey);
         txnCoordinator.ref.tell(outSecondMessage, getSelf());
-        LOGGER.debug("Client {} send to Coordinator {} ReadMessage: {}", id, txnCoordinator.id, outSecondMessage);
+        LOGGER.debug("Client {} send to Coordinator {} TxnReadMessage: {}", id, txnCoordinator.id, outSecondMessage);
 
         // Delete the current read values
         txnFirstValue = null;
@@ -245,14 +245,14 @@ public final class Client extends Actor {
         final int newSecondValue = txnSecondValue + amount;
 
         // Write request 1
-        final WriteMessage outFirstMessage = new WriteMessage(id, txnFirstKey, newFirstValue);
+        final TxnWriteMessage outFirstMessage = new TxnWriteMessage(id, txnFirstKey, newFirstValue);
         txnCoordinator.ref.tell(outFirstMessage, getSelf());
-        LOGGER.debug("Client {} send to Coordinator {} WriteMessage: {}", id, txnCoordinator.id, outFirstMessage);
+        LOGGER.debug("Client {} send to Coordinator {} TxnWriteMessage: {}", id, txnCoordinator.id, outFirstMessage);
 
         // Write request 2
-        final WriteMessage outSecondMessage = new WriteMessage(id, txnSecondKey, newSecondValue);
+        final TxnWriteMessage outSecondMessage = new TxnWriteMessage(id, txnSecondKey, newSecondValue);
         txnCoordinator.ref.tell(outSecondMessage, getSelf());
-        LOGGER.debug("Client {} send to Coordinator {} WriteMessage: {}", id, txnCoordinator.id, outSecondMessage);
+        LOGGER.debug("Client {} send to Coordinator {} TxnWriteMessage: {}", id, txnCoordinator.id, outSecondMessage);
 
         LOGGER.info("Client {} WRITE #{} taken {} ({}, {}), ({}, {})", id, txnOpDone, amount, txnFirstKey, newFirstValue, txnSecondKey, newSecondValue);
     }

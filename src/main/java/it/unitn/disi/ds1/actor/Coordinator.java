@@ -16,7 +16,7 @@ import it.unitn.disi.ds1.message.op.read.TxnReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.read.TxnReadMessage;
 import it.unitn.disi.ds1.message.op.read.TxnReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.write.TxnWriteCoordinatorMessage;
-import it.unitn.disi.ds1.message.op.write.WriteMessage;
+import it.unitn.disi.ds1.message.op.write.TxnWriteMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcVoteRequestMessage;
 import it.unitn.disi.ds1.message.txn.TxnAcceptMessage;
 import it.unitn.disi.ds1.message.txn.TxnBeginMessage;
@@ -102,7 +102,7 @@ public final class Coordinator extends Actor {
                 .match(TxnBeginMessage.class, this::onTxnBeginMessage)
                 .match(TxnReadMessage.class, this::onTxnReadMessage)
                 .match(TxnReadResultCoordinatorMessage.class, this::onTxnReadResultCoordinatorMessage)
-                .match(WriteMessage.class, this::onWriteMessage)
+                .match(TxnWriteMessage.class, this::onTxnWriteMessage)
                 .match(TxnEndMessage.class, this::onTxnEndMessage)
                 .match(TwoPcVoteResponseMessage.class, this::onTwoPcVoteResponseMessage)
                 .match(SnapshotMessage.class, this::onSnapshotMessage)
@@ -264,12 +264,12 @@ public final class Coordinator extends Actor {
     }
 
     /**
-     * Callback for {@link WriteMessage} message.
+     * Callback for {@link TxnWriteMessage} message.
      *
      * @param message Received message
      */
-    private void onWriteMessage(WriteMessage message) {
-        LOGGER.debug("Coordinator {} received from Client {} WriteMessage: {}", id, message.clientId, message);
+    private void onTxnWriteMessage(TxnWriteMessage message) {
+        LOGGER.debug("Coordinator {} received from Client {} TxnWriteMessage: {}", id, message.clientId, message);
 
         // Obtain correct DataStore
         final ActorMetadata dataStore = dataStoreByItemKey(message.key);

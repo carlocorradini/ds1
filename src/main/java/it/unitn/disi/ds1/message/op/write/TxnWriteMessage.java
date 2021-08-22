@@ -10,7 +10,7 @@ import java.io.Serializable;
  * Write request message
  * from {@link it.unitn.disi.ds1.actor.Client} to {@link it.unitn.disi.ds1.actor.Coordinator}.
  */
-public final class WriteMessage implements Serializable {
+public final class TxnWriteMessage implements Serializable {
     private static final long serialVersionUID = 8248714506636891726L;
 
     /**
@@ -32,13 +32,13 @@ public final class WriteMessage implements Serializable {
     public final int value;
 
     /**
-     * Construct a new WriteMessage class.
+     * Construct a new TxnWriteMessage class.
      *
      * @param clientId      Client id
      * @param key           Item key to write
      * @param value         Item new value to write
      */
-    public WriteMessage(int clientId, int key, int value) {
+    public TxnWriteMessage(int clientId, int key, int value) {
         this.clientId = clientId;
         this.key = key;
         this.value = value;
