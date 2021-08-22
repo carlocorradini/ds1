@@ -202,11 +202,6 @@ public final class Coordinator extends Actor {
     private void onTxnBeginMessage(TxnBeginMessage message) {
         LOGGER.debug("Coordinator {} received from Client {} TxnBeginMessage: {}", id, message.senderId, message);
 
-        // Check if Client has already a transaction running
-        final UUID transactionIdRunning = clientIdToTransactionId.get(message.senderId);
-        if (transactionIdRunning != null)
-            throw new IllegalStateException(String.format("Coordinator %d received a TxnBeginMessage from Client %d when transaction %s is running", id, message.senderId, transactionIdRunning));
-
         // Generate a transaction id and store all relevant data
         final UUID transactionId = UUID.randomUUID();
         clientIdToTransactionId.put(message.senderId, transactionId);
@@ -226,11 +221,11 @@ public final class Coordinator extends Actor {
     private void onTxnReadMessage(TxnReadMessage message) {
         LOGGER.debug("Coordinator {} received from Client {} TxnReadMessage: {}", id, message.senderId, message);
 
-        // Obtain correct DataStore
-        final ActorMetadata dataStore = dataStoreByItemKey(message.key);
-
         // Obtain transaction id
         final UUID transactionId = clientIdToTransactionId.get(message.senderId);
+
+        // Obtain correct DataStore
+        final ActorMetadata dataStore = dataStoreByItemKey(message.key);
 
         // Add DataStore to affected in transaction
         final Set<ActorMetadata> dataStoresAffected = dataStoresAffectedInTransaction.computeIfAbsent(transactionId, k -> new HashSet<>());
