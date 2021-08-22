@@ -33,6 +33,16 @@ public final class DataStore extends Actor {
     private static final Logger LOGGER = LogManager.getLogger(DataStore.class);
 
     /**
+     * {@link Item} default value.
+     */
+    private static final int ITEM_DEFAULT_VALUE = 100;
+
+    /**
+     * {@link Item} default version.
+     */
+    private static final int ITEM_DEFAULT_VERSION = 0;
+
+    /**
      * Gson instance.
      */
     private static final Gson GSON = new GsonBuilder()
@@ -71,7 +81,7 @@ public final class DataStore extends Actor {
         this.workspaces = new HashMap<>();
 
         // Initialize items
-        IntStream.range(id * 10, (id * 10) + 10).forEach(i -> storage.put(i, new Item()));
+        IntStream.range(id * 10, (id * 10) + 10).forEach(i -> storage.put(i, new Item.Builder(ITEM_DEFAULT_VALUE, ITEM_DEFAULT_VERSION).build()));
 
         LOGGER.debug("DataStore {} initialized", id);
     }
@@ -187,7 +197,7 @@ public final class DataStore extends Actor {
         if (workspace == null)
             throw new NullPointerException(String.format("DataStore %d is unable to obtain workspace for transaction %s during cleanLockItems", id, transactionId));
 
-        workspace.forEach((key, value) -> storage.get(key).unlockIfIsLocker(transactionId));
+        workspace.forEach((key, value) -> storage.get(key).unlock(transactionId));
     }
 
     /**
@@ -235,7 +245,9 @@ public final class DataStore extends Actor {
         // Add item to workspace, if not present present
         // FIXME Non so
         final Item itemInWorkspace = workspace.computeIfAbsent(message.key, k -> {
-            final Item item = new Item(itemInStorage.value, itemInStorage.version, Item.Operation.READ);
+            final Item item = new Item.Builder(itemInStorage.value, itemInStorage.version)
+                    .withOperation(Item.Operation.READ)
+                    .build();
             LOGGER.trace("DataStore {} ReadCoordinatorMessage item {} in transaction {} added to workspace: {}", id, message.key, message.transactionId, item);
             return item;
         });
@@ -259,7 +271,9 @@ public final class DataStore extends Actor {
         // Obtain Item in storage
         final Item itemInStorage = storage.get(message.key);
         // Generate new Item for workspace
-        final Item newItem = new Item(message.value, itemInStorage.version + 1, Item.Operation.WRITE);
+        final Item newItem = new Item.Builder(message.value, itemInStorage.version + 1)
+                .withOperation(Item.Operation.WRITE)
+                .build();
         // Add new Item to workspace
         workspace.put(message.key, newItem);
         LOGGER.trace("DataStore {} WriteCoordinatorMessage item {} in transaction {} added to workspace: {}", id, message.key, message.transactionId, newItem);

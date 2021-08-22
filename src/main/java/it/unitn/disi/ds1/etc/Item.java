@@ -12,7 +12,7 @@ import java.util.UUID;
  */
 public final class Item {
     /**
-     * Available operations for the Item.
+     * Available Item operations.
      */
     public enum Operation {
         /**
@@ -28,26 +28,6 @@ public final class Item {
          */
         WRITE
     }
-
-    /**
-     * Default value.
-     */
-    public static final int DEFAULT_VALUE = 100;
-
-    /**
-     * Default version.
-     */
-    public static final int DEFAULT_VERSION = 0;
-
-    /**
-     * Default operation.
-     */
-    public static final Operation DEFAULT_OPERATION = Operation.NONE;
-
-    /**
-     * Default locker.
-     */
-    public static final UUID DEFAULT_LOCKER = null;
 
     /**
      * Gson instance.
@@ -73,7 +53,7 @@ public final class Item {
     public final int version;
 
     /**
-     * Last operation done on the Item.
+     * Operation done on the Item.
      */
     @Expose
     public final Operation operation;
@@ -89,32 +69,14 @@ public final class Item {
      *
      * @param value     Value of the item
      * @param version   Version of the item
-     * @param operation Last operation done on the Item
+     * @param operation Operation done on the Item
      * @param locker    {@link UUID Transaction} that is locking the item
      */
-    public Item(int value, int version, Operation operation, UUID locker) {
+    private Item(int value, int version, Operation operation, UUID locker) {
         this.value = value;
         this.version = version;
         this.operation = operation;
         this.locker = locker;
-    }
-
-    /**
-     * Construct a new Item class.
-     *
-     * @param value     Value of the item
-     * @param version   Version of the item
-     * @param operation Last operation done on the Item
-     */
-    public Item(int value, int version, Operation operation) {
-        this(value, version, operation, DEFAULT_LOCKER);
-    }
-
-    /**
-     * Construct a new Item class.
-     */
-    public Item() {
-        this(DEFAULT_VALUE, DEFAULT_VERSION, DEFAULT_OPERATION);
     }
 
     /**
@@ -149,14 +111,7 @@ public final class Item {
 
         // Lock item
         this.locker = locker;
-        return isLocker(locker);
-    }
-
-    /**
-     * Remove the {@link UUID locker} that is locking the Item.
-     */
-    private synchronized void unlock() {
-        locker = null;
+        return true;
     }
 
     /**
@@ -165,12 +120,38 @@ public final class Item {
      *
      * @param locker {@link UUID Locker} locking the Item
      */
-    public synchronized void unlockIfIsLocker(UUID locker) {
-        if (isLocker(locker)) unlock();
+    public synchronized void unlock(UUID locker) {
+        if (isLocker(locker)) this.locker = null;
     }
 
     @Override
     public String toString() {
         return GSON.toJson(this);
+    }
+
+    /**
+     * {@link Item} builder class.
+     */
+    public static class Builder {
+        private final int value;
+        private final int version;
+        private final UUID locker;
+        private Operation operation;
+
+        public Builder(int value, int version) {
+            this.value = value;
+            this.version = version;
+            this.locker = null;
+            this.operation = Operation.NONE;
+        }
+
+        public Builder withOperation(Operation operation) {
+            this.operation = operation;
+            return this;
+        }
+
+        public Item build() {
+            return new Item(value, version, operation, locker);
+        }
     }
 }
