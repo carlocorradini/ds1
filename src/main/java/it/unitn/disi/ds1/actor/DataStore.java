@@ -3,7 +3,6 @@ package it.unitn.disi.ds1.actor;
 import akka.actor.Props;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.Item;
-import it.unitn.disi.ds1.exception.TransactionIsRunningException;
 import it.unitn.disi.ds1.message.op.read.ReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.read.ReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.write.WriteCoordinatorMessage;
@@ -11,8 +10,8 @@ import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecisionMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcVoteRequestMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcVoteResponseMessage;
-import it.unitn.disi.ds1.message.snap.SnapshotTokenMessage;
-import it.unitn.disi.ds1.message.snap.SnapshotTokenResultMessage;
+import it.unitn.disi.ds1.message.snapshot.SnapshotMessage;
+import it.unitn.disi.ds1.message.snapshot.SnapshotResultMessage;
 import it.unitn.disi.ds1.message.welcome.DataStoreWelcomeMessage;
 import it.unitn.disi.ds1.util.JsonUtil;
 import org.apache.logging.log4j.LogManager;
@@ -95,7 +94,7 @@ public final class DataStore extends Actor {
                 .match(WriteCoordinatorMessage.class, this::onWriteCoordinatorMessage)
                 .match(TwoPcVoteRequestMessage.class, this::onTwoPcVoteRequestMessage)
                 .match(TwoPcDecisionMessage.class, this::onTwoPcDecisionMessage)
-                .match(SnapshotTokenMessage.class, this::onSnapshotTokenMessage)
+                .match(SnapshotMessage.class, this::onSnapshotMessage)
                 .build();
     }
 
@@ -327,21 +326,21 @@ public final class DataStore extends Actor {
     }
 
     /**
-     * Callback for {@link SnapshotTokenMessage message}.
+     * Callback for {@link SnapshotMessage message}.
      *
      * @param message Received message
      */
-    private void onSnapshotTokenMessage(SnapshotTokenMessage message) throws TransactionIsRunningException {
-        LOGGER.debug("DataStore {} received from Coordinator {} SnapshotTokenMessage: {}", id, message.coordinatorId, message);
-        LOGGER.trace("DataStore {} generating snapshot {} of storage: {}", id, message.snapshotId, storage);
+    private void onSnapshotMessage(SnapshotMessage message) {
+        LOGGER.debug("DataStore {} received from Coordinator {} SnapshotMessage: {}", id, message.senderId, message);
+        LOGGER.trace("DataStore {} generating snapshot {}: {}", id, message.snapshotId, storage);
 
-        // Check if there are transaction running
+        // Check if there are transactions running
         if (!workspaces.isEmpty())
-            throw new TransactionIsRunningException(String.format("DataStore %d is unable to create snapshot %d since there are %d transaction(s) running", id, message.snapshotId, workspaces.size()));
+            throw new IllegalStateException(String.format("DataStore %d is unable to create snapshot %d since there are %d transaction(s) running", id, message.snapshotId, workspaces.size()));
 
         // Send response to Coordinator
-        final SnapshotTokenResultMessage outMessage = new SnapshotTokenResultMessage(id, message.snapshotId, storage);
+        final SnapshotResultMessage outMessage = new SnapshotResultMessage(id, message.snapshotId, storage);
         getSender().tell(outMessage, getSelf());
-        LOGGER.debug("DataStore {} send to Coordinator {} SnapshotTokenResultMessage: {}", id, message.coordinatorId, outMessage);
+        LOGGER.debug("DataStore {} send to Coordinator {} SnapshotResultMessage: {}", id, message.senderId, outMessage);
     }
 }

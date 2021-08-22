@@ -4,13 +4,11 @@ import akka.actor.Props;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.DataStoreDecision;
 import it.unitn.disi.ds1.etc.Item;
-import it.unitn.disi.ds1.exception.TransactionIsRunningException;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecisionMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcVoteResponseMessage;
-import it.unitn.disi.ds1.message.snap.SnapshotTokenMessage;
-import it.unitn.disi.ds1.message.snap.SnapshotTokenResultMessage;
-import it.unitn.disi.ds1.message.snap.StartSnapshotMessage;
+import it.unitn.disi.ds1.message.snapshot.SnapshotMessage;
+import it.unitn.disi.ds1.message.snapshot.SnapshotResultMessage;
 import it.unitn.disi.ds1.message.txn.TxnEndMessage;
 import it.unitn.disi.ds1.message.txn.TxnResultMessage;
 import it.unitn.disi.ds1.message.op.read.ReadResultMessage;
@@ -107,8 +105,8 @@ public final class Coordinator extends Actor {
                 .match(WriteMessage.class, this::onWriteMessage)
                 .match(TxnEndMessage.class, this::onTxnEndMessage)
                 .match(TwoPcVoteResponseMessage.class, this::onTwoPcVoteResponseMessage)
-                .match(StartSnapshotMessage.class, this::onStartSnapshotMessage)
-                .match(SnapshotTokenResultMessage.class, this::onSnapshotTokenResultMessage)
+                .match(SnapshotMessage.class, this::onSnapshotMessage)
+                .match(SnapshotResultMessage.class, this::onSnapshotResultMessage)
                 .build();
     }
 
@@ -201,13 +199,13 @@ public final class Coordinator extends Actor {
      *
      * @param message Received message
      */
-    private void onTxnBeginMessage(TxnBeginMessage message) throws TransactionIsRunningException {
+    private void onTxnBeginMessage(TxnBeginMessage message) {
         LOGGER.debug("Coordinator {} received from Client {} TxnBeginMessage: {}", id, message.clientId, message);
 
         // Check if Client has already a transaction running
         final UUID transactionIdRunning = clientIdToTransactionId.get(message.clientId);
         if (transactionIdRunning != null)
-            throw new TransactionIsRunningException(String.format("Coordinator %d received a TxnBeginMessage from Client %d when transaction %s is running", id, message.clientId, transactionIdRunning));
+            throw new IllegalStateException(String.format("Coordinator %d received a TxnBeginMessage from Client %d when transaction %s is running", id, message.clientId, transactionIdRunning));
 
         // Generate a transaction id and store all relevant data
         final UUID transactionId = UUID.randomUUID();
@@ -371,18 +369,18 @@ public final class Coordinator extends Actor {
     }
 
     /**
-     * Callback for {@link StartSnapshotMessage} message.
+     * Callback for {@link SnapshotMessage} message.
      *
      * @param message Received message
      */
-    private void onStartSnapshotMessage(StartSnapshotMessage message) {
-        LOGGER.debug("Coordinator {} received StartSnapshotMessage: {}", id, message);
+    private void onSnapshotMessage(SnapshotMessage message) {
+        LOGGER.debug("Coordinator {} received SnapshotMessage: {}", id, message);
         LOGGER.trace("Coordinator {} start snapshot {} involving {} DataStore(s)", id, message.snapshotId, dataStores.size());
 
-        // Send to all DataStore(s) snapshot request
-        final SnapshotTokenMessage outMessage = new SnapshotTokenMessage(id, message.snapshotId);
+        // Send snapshot message to all DataStore(s) snapshot request
+        final SnapshotMessage outMessage = new SnapshotMessage(id, message.snapshotId);
         dataStores.forEach(dataStore -> {
-            LOGGER.trace("Coordinator {} send to DataStore {} SnapshotTokenMessage: {}", id, dataStore.id, outMessage);
+            LOGGER.trace("Coordinator {} send to DataStore {} SnapshotMessage: {}", id, dataStore.id, outMessage);
             dataStore.ref.tell(outMessage, getSelf());
         });
 
@@ -390,14 +388,14 @@ public final class Coordinator extends Actor {
     }
 
     /**
-     * Callback for {@link SnapshotTokenResultMessage} message.
+     * Callback for {@link SnapshotResultMessage} message.
      *
      * @param message Received message
      */
-    private void onSnapshotTokenResultMessage(SnapshotTokenResultMessage message) {
-        LOGGER.debug("Coordinator {} received from DataStore {} StartSnapshotMessage: {}", id, message.dataStoreId, message);
+    private void onSnapshotResultMessage(SnapshotResultMessage message) {
+        LOGGER.debug("Coordinator {} received from DataStore {} SnapshotResultMessage: {}", id, message.dataStoreId, message);
 
-        // Add all storage from current DataStore to snapshot
+        // Add received snapshot to saved snapshot
         snapshot.putAll(message.storage);
 
         // Check if all snapshots have been received
@@ -408,7 +406,6 @@ public final class Coordinator extends Actor {
             // Calculate total Items value sum
             final int totalSum = snapshot.values().stream().mapToInt(item -> item.value).reduce(0, Integer::sum);
             // Check if totalSum is valid
-            assert snapshot.size() * 100 == dataStores.size() * 10 * 100;
             if (totalSum == snapshot.size() * 100) {
                 LOGGER.info("Coordinator {} snapshot {} sum {} is VALID", id, message.snapshotId, totalSum);
             } else {

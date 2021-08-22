@@ -6,7 +6,7 @@ import it.unitn.disi.ds1.actor.Client;
 import it.unitn.disi.ds1.actor.Coordinator;
 import it.unitn.disi.ds1.actor.DataStore;
 import it.unitn.disi.ds1.etc.ActorMetadata;
-import it.unitn.disi.ds1.message.snap.StartSnapshotMessage;
+import it.unitn.disi.ds1.message.snapshot.SnapshotMessage;
 import it.unitn.disi.ds1.message.welcome.ClientWelcomeMessage;
 import it.unitn.disi.ds1.message.welcome.CoordinatorWelcomeMessage;
 import it.unitn.disi.ds1.message.welcome.DataStoreWelcomeMessage;
@@ -91,7 +91,7 @@ public final class Main {
             if (verifyStorage) {
                 coordinators
                         .get(random.nextInt(coordinators.size()))
-                        .ref.tell(new StartSnapshotMessage(snapshotId++), ActorRef.noSender());
+                        .ref.tell(new SnapshotMessage(-1, snapshotId++), ActorRef.noSender());
             }
 
             // Terminate ?

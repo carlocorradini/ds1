@@ -1,4 +1,4 @@
-package it.unitn.disi.ds1.message.snap;
+package it.unitn.disi.ds1.message.snapshot;
 
 import com.google.gson.annotations.Expose;
 import it.unitn.disi.ds1.etc.Item;
@@ -9,11 +9,11 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
- * Reply message to {@link SnapshotTokenMessage}
+ * Reply message to {@link SnapshotMessage}
  * from {@link it.unitn.disi.ds1.actor.DataStore} to {@link it.unitn.disi.ds1.actor.Coordinator}
  * containing the current storage.
  */
-public final class SnapshotTokenResultMessage implements Serializable {
+public final class SnapshotResultMessage implements Serializable {
     private static final long serialVersionUID = 8848306550103300021L;
 
     /**
@@ -35,13 +35,13 @@ public final class SnapshotTokenResultMessage implements Serializable {
     public final Map<Integer, Item> storage;
 
     /**
-     * Construct a new SnapshotTokenResultMessage class.
+     * Construct a new SnapshotResultMessage class.
      *
      * @param dataStoreId {@link it.unitn.disi.ds1.actor.DataStore} id
      * @param snapshotId  Snapshot id
      * @param storage     Storage
      */
-    public SnapshotTokenResultMessage(int dataStoreId, int snapshotId, Map<Integer, Item> storage) {
+    public SnapshotResultMessage(int dataStoreId, int snapshotId, Map<Integer, Item> storage) {
         this.dataStoreId = dataStoreId;
         this.snapshotId = snapshotId;
         this.storage = Collections.unmodifiableMap(storage);
