@@ -33,7 +33,7 @@ public final class Main {
     /**
      * Number of {@link Client Client(s)}.
      */
-    private final static int N_CLIENTS = 128;
+    private final static int N_CLIENTS = 16;
 
     /**
      * Maximum item key index value.
@@ -78,7 +78,7 @@ public final class Main {
         final Scanner scanner = new Scanner(System.in);
         final Random random = new Random();
         int snapshotId = 0;
-        boolean terminate;
+        boolean continueTxn;
 
         do {
             // Wait ...
@@ -94,14 +94,14 @@ public final class Main {
                         .ref.tell(new SnapshotMessage(-1, snapshotId++), ActorRef.noSender());
             }
 
-            // Terminate ?
-            System.out.println("--- TERMINATE [Y|N]? ");
-            terminate = scanner.nextLine().toUpperCase().matches("(?i)^(?:y(?:es)?|1)$");
-            if (!terminate) {
+            // Continue ?
+            System.out.println("--- CONTINUE [Y|N]? ");
+            continueTxn = scanner.nextLine().toUpperCase().matches("(?i)^(?:y(?:es)?|1)$");
+            if (continueTxn) {
                 clients.forEach(client -> client.ref.tell(clientWelcomeMessage, ActorRef.noSender()));
                 System.out.flush();
             }
-        } while (!terminate);
+        } while (continueTxn);
 
         // Terminate
         LOGGER.info("Terminating system...");
