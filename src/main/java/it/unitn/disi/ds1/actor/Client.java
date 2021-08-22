@@ -153,7 +153,7 @@ public final class Client extends Actor {
         return receiveBuilder()
                 .match(ClientWelcomeMessage.class, this::onClientWelcomeMessage)
                 .match(TxnBeginResultMessage.class, this::onTxnBeginResultMessage)
-                .match(TxnAcceptTimeoutMessage.class, this::onTxnAcceptTimeoutMessage)
+                .match(TxnBeginTimeoutMessage.class, this::onTxnBeginTimeoutMessage)
                 .match(TxnReadResultMessage.class, this::onTxnReadResultMessage)
                 .match(TxnEndResultMessage.class, this::onTxnEndResultMsg)
                 .build();
@@ -199,7 +199,7 @@ public final class Client extends Actor {
         txnAcceptTimeout = getContext().system().scheduler().scheduleOnce(
                 Duration.create(500, TimeUnit.MILLISECONDS),
                 getSelf(),
-                new TxnAcceptTimeoutMessage(),
+                new TxnBeginTimeoutMessage(),
                 getContext().system().dispatcher(),
                 getSelf()
         );
@@ -308,12 +308,12 @@ public final class Client extends Actor {
     }
 
     /**
-     * Callback for {@link TxnAcceptTimeoutMessage} message.
+     * Callback for {@link TxnBeginTimeoutMessage} message.
      *
      * @param message Received message
      */
-    private void onTxnAcceptTimeoutMessage(TxnAcceptTimeoutMessage message) {
-        LOGGER.debug("Client {} received TxnAcceptTimeoutMessage: {}", id, message);
+    private void onTxnBeginTimeoutMessage(TxnBeginTimeoutMessage message) {
+        LOGGER.debug("Client {} received TxnBeginTimeoutMessage: {}", id, message);
 
         if (!txnAccepted && !txnRequested) {
             LOGGER.debug("Client {} start a new transaction due to timeout", id);
