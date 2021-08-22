@@ -7,7 +7,7 @@ import akka.actor.*;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.message.*;
-import it.unitn.disi.ds1.message.op.read.ReadMessage;
+import it.unitn.disi.ds1.message.op.read.TxnReadMessage;
 import it.unitn.disi.ds1.message.op.read.ReadResultMessage;
 import it.unitn.disi.ds1.message.op.write.WriteMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
@@ -217,12 +217,12 @@ public final class Client extends Actor {
         txnSecondKey = (txnFirstKey + randKeyOffset) % (maxItemKey + 1);
 
         // Read request 1
-        final ReadMessage outFirstMessage = new ReadMessage(id, txnFirstKey);
+        final TxnReadMessage outFirstMessage = new TxnReadMessage(id, txnFirstKey);
         txnCoordinator.ref.tell(outFirstMessage, getSelf());
         LOGGER.debug("Client {} send to Coordinator {} ReadMessage: {}", id, txnCoordinator.id, outFirstMessage);
 
         // Read request 2
-        final ReadMessage outSecondMessage = new ReadMessage(id, txnSecondKey);
+        final TxnReadMessage outSecondMessage = new TxnReadMessage(id, txnSecondKey);
         txnCoordinator.ref.tell(outSecondMessage, getSelf());
         LOGGER.debug("Client {} send to Coordinator {} ReadMessage: {}", id, txnCoordinator.id, outSecondMessage);
 

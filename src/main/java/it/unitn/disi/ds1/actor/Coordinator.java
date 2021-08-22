@@ -13,7 +13,7 @@ import it.unitn.disi.ds1.message.txn.TxnEndMessage;
 import it.unitn.disi.ds1.message.txn.TxnResultMessage;
 import it.unitn.disi.ds1.message.op.read.ReadResultMessage;
 import it.unitn.disi.ds1.message.op.read.ReadCoordinatorMessage;
-import it.unitn.disi.ds1.message.op.read.ReadMessage;
+import it.unitn.disi.ds1.message.op.read.TxnReadMessage;
 import it.unitn.disi.ds1.message.op.read.ReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.write.WriteCoordinatorMessage;
 import it.unitn.disi.ds1.message.op.write.WriteMessage;
@@ -100,7 +100,7 @@ public final class Coordinator extends Actor {
         return receiveBuilder()
                 .match(CoordinatorWelcomeMessage.class, this::onCoordinatorWelcomeMessage)
                 .match(TxnBeginMessage.class, this::onTxnBeginMessage)
-                .match(ReadMessage.class, this::onReadMessage)
+                .match(TxnReadMessage.class, this::onTxnReadMessage)
                 .match(ReadResultCoordinatorMessage.class, this::onReadResultCoordinatorMessage)
                 .match(WriteMessage.class, this::onWriteMessage)
                 .match(TxnEndMessage.class, this::onTxnEndMessage)
@@ -219,12 +219,12 @@ public final class Coordinator extends Actor {
     }
 
     /**
-     * Callback for {@link ReadMessage} message.
+     * Callback for {@link TxnReadMessage} message.
      *
      * @param message Received message
      */
-    private void onReadMessage(ReadMessage message) {
-        LOGGER.debug("Coordinator {} received from Client {} ReadMessage: {}", id, message.clientId, message);
+    private void onTxnReadMessage(TxnReadMessage message) {
+        LOGGER.debug("Coordinator {} received from Client {} TxnReadMessage: {}", id, message.clientId, message);
 
         // Obtain correct DataStore
         final ActorMetadata dataStore = dataStoreByItemKey(message.key);

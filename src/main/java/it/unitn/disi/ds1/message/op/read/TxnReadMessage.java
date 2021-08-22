@@ -10,7 +10,7 @@ import java.io.Serializable;
  * Read request message
  * from {@link it.unitn.disi.ds1.actor.Client} to {@link it.unitn.disi.ds1.actor.Coordinator}.
  */
-public final class ReadMessage implements Serializable {
+public final class TxnReadMessage implements Serializable {
     private static final long serialVersionUID = 278859909154339067L;
 
     /**
@@ -31,7 +31,7 @@ public final class ReadMessage implements Serializable {
      * @param clientId      Client id
      * @param key           Item key to read
      */
-    public ReadMessage(int clientId, int key) {
+    public TxnReadMessage(int clientId, int key) {
         this.clientId = clientId;
         this.key = key;
     }
