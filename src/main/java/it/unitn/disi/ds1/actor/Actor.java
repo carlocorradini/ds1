@@ -15,7 +15,7 @@ public abstract class Actor extends AbstractActor {
     /**
      * Logger.
      */
-    private static final Logger LOGGER = LogManager.getLogger(Client.class);
+    private static final Logger LOGGER = LogManager.getLogger(Actor.class);
 
     /**
      * {@link Random} instance.

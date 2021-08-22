@@ -1,9 +1,8 @@
 package it.unitn.disi.ds1.etc;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
+import it.unitn.disi.ds1.util.JsonUtil;
 
 import java.io.Serializable;
 
@@ -15,14 +14,7 @@ public final class DataStoreDecision implements Serializable {
     private static final long serialVersionUID = 5068914277834770966L;
 
     /**
-     * Gson instance.
-     */
-    private static final Gson GSON = new GsonBuilder()
-            .excludeFieldsWithoutExposeAnnotation()
-            .create();
-
-    /**
-     * {@link it.unitn.disi.ds1.actor.Actor} id.
+     * {@link it.unitn.disi.ds1.actor.DataStore} id.
      */
     @Expose
     public final int id;
@@ -74,6 +66,6 @@ public final class DataStoreDecision implements Serializable {
 
     @Override
     public String toString() {
-        return GSON.toJson(this);
+        return JsonUtil.GSON.toJson(this);
     }
 }

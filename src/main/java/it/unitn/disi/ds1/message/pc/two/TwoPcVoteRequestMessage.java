@@ -1,8 +1,7 @@
 package it.unitn.disi.ds1.message.pc.two;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
+import it.unitn.disi.ds1.util.JsonUtil;
 
 import java.io.Serializable;
 import java.util.UUID;
@@ -13,13 +12,6 @@ import java.util.UUID;
  */
 public final class TwoPcVoteRequestMessage extends TwoPcMessage implements Serializable {
     private static final long serialVersionUID = 6797846417399441318L;
-
-    /**
-     * Gson instance.
-     */
-    private static final Gson GSON = new GsonBuilder()
-            .excludeFieldsWithoutExposeAnnotation()
-            .create();
 
     /**
      * {@link it.unitn.disi.ds1.actor.Coordinator} id.
@@ -41,6 +33,6 @@ public final class TwoPcVoteRequestMessage extends TwoPcMessage implements Seria
 
     @Override
     public String toString() {
-        return GSON.toJson(this);
+        return JsonUtil.GSON.toJson(this);
     }
 }

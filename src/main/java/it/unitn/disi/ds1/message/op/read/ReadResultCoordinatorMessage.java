@@ -1,10 +1,9 @@
 package it.unitn.disi.ds1.message.op.read;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
 import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.message.txn.TxnMessage;
+import it.unitn.disi.ds1.util.JsonUtil;
 
 import java.util.UUID;
 
@@ -17,13 +16,6 @@ import java.io.Serializable;
  */
 public final class ReadResultCoordinatorMessage extends TxnMessage implements Serializable {
     private static final long serialVersionUID = 2418188472950018347L;
-
-    /**
-     * Gson instance.
-     */
-    private static final Gson GSON = new GsonBuilder()
-            .excludeFieldsWithoutExposeAnnotation()
-            .create();
 
     /**
      * {@link it.unitn.disi.ds1.actor.DataStore} id.
@@ -60,6 +52,6 @@ public final class ReadResultCoordinatorMessage extends TxnMessage implements Se
 
     @Override
     public String toString() {
-        return GSON.toJson(this);
+        return JsonUtil.GSON.toJson(this);
     }
 }

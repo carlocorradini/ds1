@@ -1,9 +1,8 @@
 package it.unitn.disi.ds1.message.txn;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
+import it.unitn.disi.ds1.util.JsonUtil;
 
 import java.io.Serializable;
 
@@ -14,12 +13,6 @@ import java.io.Serializable;
 public final class TxnResultMessage implements Serializable {
     private static final long serialVersionUID = -8747449002189796637L;
 
-    /**
-     * Gson instance.
-     */
-    private static final Gson GSON = new GsonBuilder()
-            .excludeFieldsWithoutExposeAnnotation()
-            .create();
     /**
      * Decision made.
      */
@@ -37,6 +30,6 @@ public final class TxnResultMessage implements Serializable {
 
     @Override
     public String toString() {
-        return GSON.toJson(this);
+        return JsonUtil.GSON.toJson(this);
     }
 }

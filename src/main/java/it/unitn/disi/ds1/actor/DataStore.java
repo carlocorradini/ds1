@@ -1,8 +1,6 @@
 package it.unitn.disi.ds1.actor;
 
 import akka.actor.Props;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.exception.TransactionIsRunningException;
@@ -16,6 +14,7 @@ import it.unitn.disi.ds1.message.pc.two.TwoPcVoteResponseMessage;
 import it.unitn.disi.ds1.message.snap.SnapshotTokenMessage;
 import it.unitn.disi.ds1.message.snap.SnapshotTokenResultMessage;
 import it.unitn.disi.ds1.message.welcome.DataStoreWelcomeMessage;
+import it.unitn.disi.ds1.util.JsonUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -41,14 +40,6 @@ public final class DataStore extends Actor {
      * {@link Item} default version.
      */
     private static final int ITEM_DEFAULT_VERSION = 0;
-
-    /**
-     * Gson instance.
-     */
-    private static final Gson GSON = new GsonBuilder()
-            .excludeFieldsWithoutExposeAnnotation()
-            .serializeNulls()
-            .create();
 
     /**
      * {@link DataStore DataStore(s)} metadata.
@@ -327,7 +318,7 @@ public final class DataStore extends Actor {
                 // Commit
                 // FIXME Rimuovere operation
                 storage.putAll(workspaces.get(message.transactionId));
-                LOGGER.info("DataStore {} successfully committed transaction {}: {}", id, message.transactionId, GSON.toJson(workspace));
+                LOGGER.info("DataStore {} successfully committed transaction {}: {}", id, message.transactionId, JsonUtil.GSON.toJson(workspace));
             }
         }
 

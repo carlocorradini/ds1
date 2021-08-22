@@ -1,8 +1,7 @@
 package it.unitn.disi.ds1.message.snap;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
+import it.unitn.disi.ds1.util.JsonUtil;
 
 import java.io.Serializable;
 
@@ -11,13 +10,6 @@ import java.io.Serializable;
  */
 public final class StartSnapshotMessage implements Serializable {
     private static final long serialVersionUID = -6783191695509349242L;
-
-    /**
-     * Gson instance.
-     */
-    private static final Gson GSON = new GsonBuilder()
-            .excludeFieldsWithoutExposeAnnotation()
-            .create();
 
     /**
      * Snapshot id.
@@ -34,6 +26,6 @@ public final class StartSnapshotMessage implements Serializable {
 
     @Override
     public String toString() {
-        return GSON.toJson(this);
+        return JsonUtil.GSON.toJson(this);
     }
 }

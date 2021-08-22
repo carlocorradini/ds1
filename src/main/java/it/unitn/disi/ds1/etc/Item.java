@@ -1,9 +1,8 @@
 package it.unitn.disi.ds1.etc;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
 import it.unitn.disi.ds1.actor.DataStore;
+import it.unitn.disi.ds1.util.JsonUtil;
 
 import java.util.UUID;
 
@@ -28,14 +27,6 @@ public final class Item {
          */
         WRITE
     }
-
-    /**
-     * Gson instance.
-     */
-    private static final Gson GSON = new GsonBuilder()
-            .excludeFieldsWithoutExposeAnnotation()
-            .serializeNulls()
-            .create();
 
     /**
      * Value of the item.
@@ -126,7 +117,7 @@ public final class Item {
 
     @Override
     public String toString() {
-        return GSON.toJson(this);
+        return JsonUtil.GSON.toJson(this);
     }
 
     /**

@@ -1,4 +1,4 @@
-package it.unitn.disi.ds1.adapter.serializer;
+package it.unitn.disi.ds1.util.adapter.serializer;
 
 import akka.actor.ActorRef;
 import com.google.gson.JsonElement;

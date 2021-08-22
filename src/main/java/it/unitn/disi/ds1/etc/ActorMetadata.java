@@ -1,9 +1,8 @@
 package it.unitn.disi.ds1.etc;
 
 import akka.actor.ActorRef;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
+import it.unitn.disi.ds1.util.JsonUtil;
 
 import java.io.Serializable;
 
@@ -13,13 +12,6 @@ import java.io.Serializable;
  */
 public final class ActorMetadata implements Serializable {
     private static final long serialVersionUID = -1491009620968209465L;
-
-    /**
-     * Gson instance.
-     */
-    private static final Gson GSON = new GsonBuilder()
-            .excludeFieldsWithoutExposeAnnotation()
-            .create();
 
     /**
      * {@link it.unitn.disi.ds1.actor.Actor} id.
@@ -68,12 +60,12 @@ public final class ActorMetadata implements Serializable {
         final int prime = 31;
         int result = 1;
         result = prime * result + id;
-        result = prime * result + ((ref == null) ? 0 : ref.hashCode());
+        result = prime * result + (ref == null ? 0 : ref.hashCode());
         return result;
     }
 
     @Override
     public String toString() {
-        return GSON.toJson(this);
+        return JsonUtil.GSON.toJson(this);
     }
 }

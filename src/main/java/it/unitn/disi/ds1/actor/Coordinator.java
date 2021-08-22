@@ -1,8 +1,6 @@
 package it.unitn.disi.ds1.actor;
 
 import akka.actor.Props;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.DataStoreDecision;
 import it.unitn.disi.ds1.etc.Item;
@@ -25,6 +23,7 @@ import it.unitn.disi.ds1.message.pc.two.TwoPcVoteRequestMessage;
 import it.unitn.disi.ds1.message.txn.TxnAcceptMessage;
 import it.unitn.disi.ds1.message.txn.TxnBeginMessage;
 import it.unitn.disi.ds1.message.welcome.CoordinatorWelcomeMessage;
+import it.unitn.disi.ds1.util.JsonUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -38,14 +37,6 @@ public final class Coordinator extends Actor {
      * Logger.
      */
     private static final Logger LOGGER = LogManager.getLogger(Coordinator.class);
-
-    /**
-     * Gson instance.
-     */
-    private static final Gson GSON = new GsonBuilder()
-            .excludeFieldsWithoutExposeAnnotation()
-            .serializeNulls()
-            .create();
 
     /**
      * {@link DataStore DataStore(s)} metadata.
@@ -412,7 +403,7 @@ public final class Coordinator extends Actor {
         // Check if all snapshots have been received
         if (snapshot.size() == (dataStores.size() * 10)) {
             // Print snapshot
-            LOGGER.info("Coordinator {} snapshot {}: {}", id, message.snapshotId, GSON.toJson(snapshot));
+            LOGGER.info("Coordinator {} snapshot {}: {}", id, message.snapshotId, JsonUtil.GSON.toJson(snapshot));
 
             // Calculate total Items value sum
             final int totalSum = snapshot.values().stream().mapToInt(item -> item.value).reduce(0, Integer::sum);
