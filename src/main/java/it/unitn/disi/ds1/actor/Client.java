@@ -7,9 +7,9 @@ import akka.actor.*;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.message.*;
-import it.unitn.disi.ds1.message.op.read.TxnReadMessage;
-import it.unitn.disi.ds1.message.op.read.TxnReadResultMessage;
-import it.unitn.disi.ds1.message.op.write.TxnWriteMessage;
+import it.unitn.disi.ds1.message.txn.read.TxnReadMessage;
+import it.unitn.disi.ds1.message.txn.read.TxnReadResultMessage;
+import it.unitn.disi.ds1.message.txn.write.TxnWriteMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcDecision;
 import it.unitn.disi.ds1.message.txn.*;
 import it.unitn.disi.ds1.message.welcome.ClientWelcomeMessage;
@@ -155,7 +155,7 @@ public final class Client extends Actor {
                 .match(TxnAcceptMessage.class, this::onTxnAcceptMessage)
                 .match(TxnAcceptTimeoutMessage.class, this::onTxnAcceptTimeoutMessage)
                 .match(TxnReadResultMessage.class, this::onTxnReadResultMessage)
-                .match(TxnResultMessage.class, this::onTxnResultMsg)
+                .match(TxnEndResultMessage.class, this::onTxnEndResultMsg)
                 .build();
     }
 
@@ -352,12 +352,12 @@ public final class Client extends Actor {
     }
 
     /**
-     * Callback for {@link TxnResultMessage} message.
+     * Callback for {@link TxnEndResultMessage} message.
      *
      * @param message Received message
      */
-    private void onTxnResultMsg(TxnResultMessage message) {
-        LOGGER.debug("Client {} received TxnResultMessage with decision {}: {}", id, message.decision, message);
+    private void onTxnEndResultMsg(TxnEndResultMessage message) {
+        LOGGER.debug("Client {} received TxnEndResultMessage with decision {}: {}", id, message.decision, message);
 
         switch (message.decision) {
             case COMMIT: {

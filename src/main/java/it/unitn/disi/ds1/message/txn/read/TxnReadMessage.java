@@ -1,4 +1,4 @@
-package it.unitn.disi.ds1.message.op.read;
+package it.unitn.disi.ds1.message.txn.read;
 
 import com.google.gson.annotations.Expose;
 import it.unitn.disi.ds1.etc.Item;

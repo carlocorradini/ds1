@@ -10,13 +10,13 @@ import it.unitn.disi.ds1.message.pc.two.TwoPcVoteResponseMessage;
 import it.unitn.disi.ds1.message.snapshot.SnapshotMessage;
 import it.unitn.disi.ds1.message.snapshot.SnapshotResultMessage;
 import it.unitn.disi.ds1.message.txn.TxnEndMessage;
-import it.unitn.disi.ds1.message.txn.TxnResultMessage;
-import it.unitn.disi.ds1.message.op.read.TxnReadResultMessage;
-import it.unitn.disi.ds1.message.op.read.TxnReadCoordinatorMessage;
-import it.unitn.disi.ds1.message.op.read.TxnReadMessage;
-import it.unitn.disi.ds1.message.op.read.TxnReadResultCoordinatorMessage;
-import it.unitn.disi.ds1.message.op.write.TxnWriteCoordinatorMessage;
-import it.unitn.disi.ds1.message.op.write.TxnWriteMessage;
+import it.unitn.disi.ds1.message.txn.TxnEndResultMessage;
+import it.unitn.disi.ds1.message.txn.read.TxnReadResultMessage;
+import it.unitn.disi.ds1.message.txn.read.TxnReadCoordinatorMessage;
+import it.unitn.disi.ds1.message.txn.read.TxnReadMessage;
+import it.unitn.disi.ds1.message.txn.read.TxnReadResultCoordinatorMessage;
+import it.unitn.disi.ds1.message.txn.write.TxnWriteCoordinatorMessage;
+import it.unitn.disi.ds1.message.txn.write.TxnWriteMessage;
 import it.unitn.disi.ds1.message.pc.two.TwoPcVoteRequestMessage;
 import it.unitn.disi.ds1.message.txn.TxnAcceptMessage;
 import it.unitn.disi.ds1.message.txn.TxnBeginMessage;
@@ -157,9 +157,9 @@ public final class Coordinator extends Actor {
 
         // Communicate commit decision to Client
         final ActorMetadata client = transactionIdToClient.get(transactionId);
-        final TxnResultMessage outMessageToClient = new TxnResultMessage(decision);
+        final TxnEndResultMessage outMessageToClient = new TxnEndResultMessage(decision);
         client.ref.tell(outMessageToClient, getSender());
-        LOGGER.debug("Coordinator {} send to Client {} that transaction {} is {} TxnResultMessage: {}", id, client.id, transactionId, decision, outMessageToClient);
+        LOGGER.debug("Coordinator {} send to Client {} that transaction {} is {} TxnEndResultMessage: {}", id, client.id, transactionId, decision, outMessageToClient);
 
         // Clean resources
         cleanResources(transactionId);

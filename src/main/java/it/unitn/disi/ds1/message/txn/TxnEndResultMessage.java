@@ -10,7 +10,7 @@ import java.io.Serializable;
  * Message from {@link it.unitn.disi.ds1.actor.Coordinator} to {@link it.unitn.disi.ds1.actor.Client}
  * with outcome of transaction.
  */
-public final class TxnResultMessage implements Serializable {
+public final class TxnEndResultMessage implements Serializable {
     private static final long serialVersionUID = -8747449002189796637L;
 
     /**
@@ -20,11 +20,11 @@ public final class TxnResultMessage implements Serializable {
     public final TwoPcDecision decision;
 
     /**
-     * Construct a new TxnResultMessage class.
+     * Construct a new TxnEndResultMessage class.
      *
      * @param decision Decision
      */
-    public TxnResultMessage(TwoPcDecision decision) {
+    public TxnEndResultMessage(TwoPcDecision decision) {
         this.decision = decision;
     }
 

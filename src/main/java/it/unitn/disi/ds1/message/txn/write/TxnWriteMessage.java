@@ -1,4 +1,4 @@
-package it.unitn.disi.ds1.message.op.write;
+package it.unitn.disi.ds1.message.txn.write;
 
 import com.google.gson.annotations.Expose;
 import it.unitn.disi.ds1.etc.Item;
