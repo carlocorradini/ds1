@@ -5,8 +5,8 @@ import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.DataStoreDecision;
 import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.etc.Decision;
-import it.unitn.disi.ds1.message.pc.two.TwoPcDecisionMessage;
-import it.unitn.disi.ds1.message.pc.two.TwoPcVoteResponseMessage;
+import it.unitn.disi.ds1.message.twopc.TwoPcDecisionMessage;
+import it.unitn.disi.ds1.message.twopc.TwoPcVoteResultMessage;
 import it.unitn.disi.ds1.message.snapshot.SnapshotMessage;
 import it.unitn.disi.ds1.message.snapshot.SnapshotResultMessage;
 import it.unitn.disi.ds1.message.txn.TxnEndMessage;
@@ -17,7 +17,7 @@ import it.unitn.disi.ds1.message.txn.read.TxnReadMessage;
 import it.unitn.disi.ds1.message.txn.read.TxnReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.txn.write.TxnWriteCoordinatorMessage;
 import it.unitn.disi.ds1.message.txn.write.TxnWriteMessage;
-import it.unitn.disi.ds1.message.pc.two.TwoPcVoteRequestMessage;
+import it.unitn.disi.ds1.message.twopc.TwoPcVoteMessage;
 import it.unitn.disi.ds1.message.txn.TxnBeginResultMessage;
 import it.unitn.disi.ds1.message.txn.TxnBeginMessage;
 import it.unitn.disi.ds1.message.welcome.CoordinatorWelcomeMessage;
@@ -104,7 +104,7 @@ public final class Coordinator extends Actor {
                 .match(TxnReadResultCoordinatorMessage.class, this::onTxnReadResultCoordinatorMessage)
                 .match(TxnWriteMessage.class, this::onTxnWriteMessage)
                 .match(TxnEndMessage.class, this::onTxnEndMessage)
-                .match(TwoPcVoteResponseMessage.class, this::onTwoPcVoteResponseMessage)
+                .match(TwoPcVoteResultMessage.class, this::onTwoPcVoteResultMessage)
                 .match(SnapshotMessage.class, this::onSnapshotMessage)
                 .match(SnapshotResultMessage.class, this::onSnapshotResultMessage)
                 .build();
@@ -312,12 +312,12 @@ public final class Coordinator extends Actor {
                 // Check if there is at least one affected DataStore
                 if (!affectedDataStores.isEmpty()) {
                     // DataStore(s) affected
-                    final TwoPcVoteRequestMessage outMessage = new TwoPcVoteRequestMessage(id, transactionId, Decision.COMMIT);
+                    final TwoPcVoteMessage outMessage = new TwoPcVoteMessage(id, transactionId, Decision.COMMIT);
                     affectedDataStores.forEach(dataStore -> {
                         dataStore.ref.tell(outMessage, getSelf());
-                        LOGGER.trace("Coordinator {} send to affected DataStore {} if can COMMIT transaction {} TwoPcVoteRequestMessage: {}", id, dataStore.id, transactionId, outMessage);
+                        LOGGER.trace("Coordinator {} send to affected DataStore {} if can COMMIT transaction {} TwoPcVoteMessage: {}", id, dataStore.id, transactionId, outMessage);
                     });
-                    LOGGER.debug("Coordinator {} send to {} affected DataStore(s) if can COMMIT transaction {} TwoPcVoteRequestMessage: {}", id, affectedDataStores.size(), transactionId, outMessage);
+                    LOGGER.debug("Coordinator {} send to {} affected DataStore(s) if can COMMIT transaction {} TwoPcVoteMessage: {}", id, affectedDataStores.size(), transactionId, outMessage);
                 } else {
                     // No DataStore(s) affected
                     LOGGER.warn("Coordinator {} no DataStore(s) are affected in transaction {}", id, transactionId);
@@ -335,12 +335,12 @@ public final class Coordinator extends Actor {
     }
 
     /**
-     * Callback for {@link TwoPcVoteResponseMessage} message.
+     * Callback for {@link TwoPcVoteResultMessage} message.
      *
      * @param message Received message
      */
-    private void onTwoPcVoteResponseMessage(TwoPcVoteResponseMessage message) {
-        LOGGER.debug("Coordinator {} received from DataStore {} TwoPcVoteResponseMessage: {}", id, message.senderId, message);
+    private void onTwoPcVoteResultMessage(TwoPcVoteResultMessage message) {
+        LOGGER.debug("Coordinator {} received from DataStore {} TwoPcVoteResultMessage: {}", id, message.senderId, message);
 
         // Obtain or create DataStore(s) decisions
         final Set<DataStoreDecision> decisions = transactionDecisions.computeIfAbsent(message.transactionId, k -> new HashSet<>());

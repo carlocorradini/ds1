@@ -1,4 +1,4 @@
-package it.unitn.disi.ds1.message.pc.two;
+package it.unitn.disi.ds1.message.twopc;
 
 import com.google.gson.annotations.Expose;
 import it.unitn.disi.ds1.etc.Decision;

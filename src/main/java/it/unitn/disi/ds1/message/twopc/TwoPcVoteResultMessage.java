@@ -1,4 +1,4 @@
-package it.unitn.disi.ds1.message.pc.two;
+package it.unitn.disi.ds1.message.twopc;
 
 import it.unitn.disi.ds1.etc.Decision;
 import it.unitn.disi.ds1.util.JsonUtil;
@@ -10,17 +10,17 @@ import java.util.UUID;
  * Reply from {@link it.unitn.disi.ds1.actor.DataStore} to {@link it.unitn.disi.ds1.actor.Coordinator}
  * with Yes or No decision for committing
  */
-public final class TwoPcVoteResponseMessage extends TwoPcMessage implements Serializable {
+public final class TwoPcVoteResultMessage extends TwoPcMessage implements Serializable {
     private static final long serialVersionUID = 4917833122149828262L;
 
     /**
-     * Construct a new TwoPcVoteResponseMessage class.
+     * Construct a new TwoPcVoteResultMessage class.
      *
      * @param dataStoreId   DataStore id
      * @param transactionId Transaction id
      * @param decision      Decision
      */
-    public TwoPcVoteResponseMessage(int dataStoreId, UUID transactionId, Decision decision) {
+    public TwoPcVoteResultMessage(int dataStoreId, UUID transactionId, Decision decision) {
         super(dataStoreId, transactionId, decision);
     }
 

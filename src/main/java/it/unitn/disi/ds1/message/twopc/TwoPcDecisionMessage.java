@@ -1,4 +1,4 @@
-package it.unitn.disi.ds1.message.pc.two;
+package it.unitn.disi.ds1.message.twopc;
 
 import it.unitn.disi.ds1.etc.Decision;
 import it.unitn.disi.ds1.util.JsonUtil;

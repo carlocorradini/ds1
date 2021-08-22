@@ -7,9 +7,9 @@ import it.unitn.disi.ds1.message.txn.read.TxnReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.txn.read.TxnReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.txn.write.TxnWriteCoordinatorMessage;
 import it.unitn.disi.ds1.etc.Decision;
-import it.unitn.disi.ds1.message.pc.two.TwoPcDecisionMessage;
-import it.unitn.disi.ds1.message.pc.two.TwoPcVoteRequestMessage;
-import it.unitn.disi.ds1.message.pc.two.TwoPcVoteResponseMessage;
+import it.unitn.disi.ds1.message.twopc.TwoPcDecisionMessage;
+import it.unitn.disi.ds1.message.twopc.TwoPcVoteMessage;
+import it.unitn.disi.ds1.message.twopc.TwoPcVoteResultMessage;
 import it.unitn.disi.ds1.message.snapshot.SnapshotMessage;
 import it.unitn.disi.ds1.message.snapshot.SnapshotResultMessage;
 import it.unitn.disi.ds1.message.welcome.DataStoreWelcomeMessage;
@@ -92,7 +92,7 @@ public final class DataStore extends Actor {
                 .match(DataStoreWelcomeMessage.class, this::onDataStoreWelcomeMessage)
                 .match(TxnReadCoordinatorMessage.class, this::onTxnReadCoordinatorMessage)
                 .match(TxnWriteCoordinatorMessage.class, this::onTxnWriteCoordinatorMessage)
-                .match(TwoPcVoteRequestMessage.class, this::onTwoPcVoteRequestMessage)
+                .match(TwoPcVoteMessage.class, this::onTwoPcVoteMessage)
                 .match(TwoPcDecisionMessage.class, this::onTwoPcDecisionMessage)
                 .match(SnapshotMessage.class, this::onSnapshotMessage)
                 .build();
@@ -270,12 +270,12 @@ public final class DataStore extends Actor {
     }
 
     /**
-     * Callback for {@link TwoPcVoteRequestMessage} message.
+     * Callback for {@link TwoPcVoteMessage} message.
      *
      * @param message Received message
      */
-    private void onTwoPcVoteRequestMessage(TwoPcVoteRequestMessage message) {
-        LOGGER.debug("DataStore {} received from Coordinator {} TwoPcVoteRequestMessage: {}", id, message.senderId, message);
+    private void onTwoPcVoteMessage(TwoPcVoteMessage message) {
+        LOGGER.debug("DataStore {} received from Coordinator {} TwoPcVoteMessage: {}", id, message.senderId, message);
 
         final boolean canCommit;
 
@@ -294,9 +294,9 @@ public final class DataStore extends Actor {
         }
 
         // Send response to Coordinator
-        final TwoPcVoteResponseMessage outMessage = new TwoPcVoteResponseMessage(id, message.transactionId, Decision.valueOf(canCommit));
+        final TwoPcVoteResultMessage outMessage = new TwoPcVoteResultMessage(id, message.transactionId, Decision.valueOf(canCommit));
         getSender().tell(outMessage, getSender());
-        LOGGER.debug("DataStore {} send to Coordinator {} TwoPcVoteResponseMessage: {}", id, message.senderId, outMessage);
+        LOGGER.debug("DataStore {} send to Coordinator {} TwoPcVoteResultMessage: {}", id, message.senderId, outMessage);
     }
 
     /**
