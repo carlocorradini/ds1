@@ -11,63 +11,90 @@ import java.util.UUID;
  */
 public final class Item {
     /**
-     * Available Item operations.
-     */
-    public enum Operation {
-        /**
-         * None.
-         */
-        NONE,
-        /**
-         * Read.
-         */
-        READ,
-        /**
-         * Write.
-         */
-        WRITE
-    }
-
-    /**
-     * Value of the item.
-     * Any change applied updates the version (version + 1).
+     * Value of the Item.
      */
     @Expose
-    public final int value;
+    private int value;
 
     /**
-     * Version of the item.
-     * Any change applied to value also updates its version (version + 1).
-     * A new item has version set to DEFAULT_VERSION.
+     * Version of the Item.
      */
     @Expose
-    public final int version;
-
-    /**
-     * Operation done on the Item.
-     */
-    @Expose
-    public final Operation operation;
+    private int version;
 
     /**
      * {@link UUID Transaction} that is locking the Item.
      */
     @Expose
-    public volatile UUID locker;
+    private volatile UUID locker;
+
+    /**
+     * Boolean flag used to check if the value of
+     * the Item has changed after creation.
+     */
+    private boolean valueChanged;
 
     /**
      * Construct a new Item class.
      *
-     * @param value     Value of the item
-     * @param version   Version of the item
-     * @param operation Operation done on the Item
-     * @param locker    {@link UUID Transaction} that is locking the item
+     * @param value   Value of the item
+     * @param version Version of the item
      */
-    private Item(int value, int version, Operation operation, UUID locker) {
+    public Item(int value, int version) {
         this.value = value;
         this.version = version;
-        this.operation = operation;
-        this.locker = locker;
+        this.locker = null;
+        this.valueChanged = false;
+    }
+
+    /**
+     * Return value of the Item.
+     *
+     * @return Item value
+     */
+    public int getValue() {
+        return value;
+    }
+
+    /**
+     * Return version of the Item.
+     *
+     * @return Item version
+     */
+    public int getVersion() {
+        return version;
+    }
+
+    /**
+     * Return {@link UUID locker} of the Item.
+     *
+     * @return Item locker
+     */
+    public UUID getLocker() {
+        return locker;
+    }
+
+    /**
+     * Set new value of the Item.
+     *
+     * @param value New Item value
+     */
+    public void setValue(int value) {
+        this.value = value;
+
+        if (!valueChanged) {
+            valueChanged = true;
+            version += 1;
+        }
+    }
+
+    /**
+     * Return true if the value of the Item has changed after creation, false otherwise.
+     *
+     * @return True if value changed, false otherwise.
+     */
+    public boolean isValueChanged() {
+        return valueChanged;
     }
 
     /**
@@ -118,31 +145,5 @@ public final class Item {
     @Override
     public String toString() {
         return JsonUtil.GSON.toJson(this);
-    }
-
-    /**
-     * {@link Item} builder class.
-     */
-    public static class Builder {
-        private final int value;
-        private final int version;
-        private final UUID locker;
-        private Operation operation;
-
-        public Builder(int value, int version) {
-            this.value = value;
-            this.version = version;
-            this.locker = null;
-            this.operation = Operation.NONE;
-        }
-
-        public Builder withOperation(Operation operation) {
-            this.operation = operation;
-            return this;
-        }
-
-        public Item build() {
-            return new Item(value, version, operation, locker);
-        }
     }
 }

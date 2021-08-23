@@ -71,7 +71,7 @@ public final class DataStore extends Actor {
         this.workspaces = new HashMap<>();
 
         // Initialize items
-        IntStream.range(id * 10, (id * 10) + 10).forEach(i -> storage.put(i, new Item.Builder(ITEM_DEFAULT_VALUE, ITEM_DEFAULT_VERSION).build()));
+        IntStream.range(id * 10, (id * 10) + 10).forEach(i -> storage.put(i, new Item(ITEM_DEFAULT_VALUE, ITEM_DEFAULT_VERSION)));
 
         LOGGER.debug("DataStore {} initialized", id);
     }
@@ -139,25 +139,23 @@ public final class DataStore extends Actor {
                     final Item itemInWorkSpace = entry.getValue();
                     final Item itemInStorage = storage.get(entry.getKey());
 
-                    switch (itemInWorkSpace.operation) {
-                        case READ: {
-                            // Version & Value must be the same as storage
-                            final boolean check = itemInWorkSpace.version == itemInStorage.version
-                                    && itemInWorkSpace.value == itemInStorage.value;
-                            if (!check)
-                                LOGGER.debug("DataStore {} READ check for Item {} in transaction {} is INVALID", id, entry.getKey(), transactionId);
-                            return check;
+                    final boolean isValid;
+                    if (!itemInWorkSpace.isValueChanged()) {
+                        // READ
+                        isValid = itemInWorkSpace.getVersion() == itemInStorage.getVersion()
+                                && itemInWorkSpace.getValue() == itemInStorage.getValue();
+                        if (!isValid) {
+                            LOGGER.debug("DataStore {} READ check for Item {} in transaction {} is INVALID", id, entry.getKey(), transactionId);
                         }
-                        case WRITE: {
-                            // Version must be only one more than storage
-                            final boolean check = itemInWorkSpace.version == itemInStorage.version + 1;
-                            if (!check)
-                                LOGGER.debug("DataStore {} WRITE check for Item {} in transaction {} is INVALID", id, entry.getKey(), transactionId);
-                            return check;
+                    } else {
+                        // WRITE
+                        isValid = itemInWorkSpace.getVersion() == itemInStorage.getVersion() + 1;
+                        if (!isValid) {
+                            LOGGER.debug("DataStore {} WRITE check for Item {} in transaction {} is INVALID", id, entry.getKey(), transactionId);
                         }
-                        default:
-                            throw new IllegalStateException(String.format("DataStore %d has invalid Item %d operation value during checkItemsVersion in workspace %s: %s", id, entry.getKey(), transactionId, itemInWorkSpace));
                     }
+
+                    return isValid;
                 });
     }
 
@@ -237,15 +235,13 @@ public final class DataStore extends Actor {
 
         // Obtain Item in workspace, compute it if absent
         final Item itemInWorkspace = workspace.computeIfAbsent(message.key, k -> {
-            final Item item = new Item.Builder(itemInStorage.value, itemInStorage.version)
-                    .withOperation(Item.Operation.READ)
-                    .build();
+            final Item item = new Item(itemInStorage.getValue(), itemInStorage.getVersion());
             LOGGER.trace("DataStore {} on READ added Item {} involving transaction {} to workspace: {}", id, message.key, message.transactionId, item);
             return item;
         });
 
         // Respond to Coordinator with Item
-        final TxnReadResultCoordinatorMessage outMessage = new TxnReadResultCoordinatorMessage(id, message.transactionId, message.key, itemInWorkspace.value);
+        final TxnReadResultCoordinatorMessage outMessage = new TxnReadResultCoordinatorMessage(id, message.transactionId, message.key, itemInWorkspace.getValue());
         getSender().tell(outMessage, getSelf());
         LOGGER.debug("DataStore {} send to Coordinator {} TxnReadResultCoordinatorMessage: {}", id, message.senderId, outMessage);
     }
@@ -266,17 +262,8 @@ public final class DataStore extends Actor {
 
         // Compute Item in workspace
         final Item itemInWorkspace = workspace.compute(message.key, (k, oldItemInWorkspace) -> {
-            // FIX Schifo da fixare
-            int newItemVersion = itemInStorage.version + 1;
-            if (oldItemInWorkspace != null && oldItemInWorkspace.operation == Item.Operation.WRITE) {
-                newItemVersion = oldItemInWorkspace.version;
-            } else if (oldItemInWorkspace != null && oldItemInWorkspace.operation == Item.Operation.READ) {
-                newItemVersion = oldItemInWorkspace.version + 1;
-            }
-
-            final Item item = new Item.Builder(message.value, newItemVersion)
-                    .withOperation(Item.Operation.WRITE)
-                    .build();
+            final Item item = oldItemInWorkspace == null ? new Item(message.value, itemInStorage.getVersion()) : oldItemInWorkspace;
+            item.setValue(message.value);
             LOGGER.trace("DataStore {} on WRITE added Item {} involving transaction {} to workspace: {}", id, message.key, message.transactionId, item);
             return item;
         });

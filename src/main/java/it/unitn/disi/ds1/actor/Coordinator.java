@@ -398,7 +398,7 @@ public final class Coordinator extends Actor {
             LOGGER.info("Coordinator {} snapshot {}: {}", id, message.snapshotId, JsonUtil.GSON.toJson(snapshot));
 
             // Calculate total Items value sum
-            final int totalSum = snapshot.values().stream().mapToInt(item -> item.value).reduce(0, Integer::sum);
+            final int totalSum = snapshot.values().stream().mapToInt(Item::getValue).reduce(0, Integer::sum);
             // Check if totalSum is valid
             if (totalSum == snapshot.size() * 100) {
                 LOGGER.info("Coordinator {} snapshot {} sum {} is VALID", id, message.snapshotId, totalSum);

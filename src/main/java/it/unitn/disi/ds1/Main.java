@@ -33,7 +33,7 @@ public final class Main {
     /**
      * Number of {@link Client Client(s)}.
      */
-    private final static int N_CLIENTS = 16;
+    private final static int N_CLIENTS = 64;
 
     /**
      * Maximum item key index value.
