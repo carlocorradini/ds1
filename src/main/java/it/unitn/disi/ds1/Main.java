@@ -21,26 +21,6 @@ import java.util.stream.IntStream;
  */
 public final class Main {
     /**
-     * Number of {@link DataStore Data Store(s)}.
-     */
-    private final static int N_DATA_STORES = 4;
-
-    /**
-     * Number of {@link Coordinator Coordinator(s)}.
-     */
-    private final static int N_COORDINATORS = 8;
-
-    /**
-     * Number of {@link Client Client(s)}.
-     */
-    private final static int N_CLIENTS = 64;
-
-    /**
-     * Maximum item key index value.
-     */
-    private final static int MAX_ITEM_KEY = (N_DATA_STORES * 10) - 1;
-
-    /**
      * Logger.
      */
     private static final Logger LOGGER = LogManager.getLogger(Main.class);
@@ -48,20 +28,20 @@ public final class Main {
     public static void main(String[] args) {
         // --- Variables ---
         final ActorSystem system = ActorSystem.create("banky");
-        final List<ActorMetadata> dataStores = new ArrayList<>(N_DATA_STORES);
-        final List<ActorMetadata> coordinators = new ArrayList<>(N_COORDINATORS);
-        final List<ActorMetadata> clients = new ArrayList<>(N_CLIENTS);
+        final List<ActorMetadata> dataStores = new ArrayList<>(Config.N_DATA_STORES);
+        final List<ActorMetadata> coordinators = new ArrayList<>(Config.N_COORDINATORS);
+        final List<ActorMetadata> clients = new ArrayList<>(Config.N_CLIENTS);
 
         // --- Initialization ---
         // Data stores
-        LOGGER.info("Initializing {} data stores", N_DATA_STORES);
-        IntStream.range(0, N_DATA_STORES).forEach(id -> dataStores.add(ActorMetadata.of(id, system.actorOf(DataStore.props(id)))));
+        LOGGER.info("Initializing {} data stores", Config.N_DATA_STORES);
+        IntStream.range(0, Config.N_DATA_STORES).forEach(id -> dataStores.add(ActorMetadata.of(id, system.actorOf(DataStore.props(id)))));
         // Coordinators
-        LOGGER.info("Initializing {} coordinators", N_COORDINATORS);
-        IntStream.range(0, N_COORDINATORS).forEach(id -> coordinators.add(ActorMetadata.of(id, system.actorOf(Coordinator.props(id)))));
+        LOGGER.info("Initializing {} coordinators", Config.N_COORDINATORS);
+        IntStream.range(0, Config.N_COORDINATORS).forEach(id -> coordinators.add(ActorMetadata.of(id, system.actorOf(Coordinator.props(id)))));
         // Clients
-        LOGGER.info("Initializing {} clients", N_CLIENTS);
-        IntStream.range(0, N_CLIENTS).forEach(id -> clients.add(ActorMetadata.of(id, system.actorOf(Client.props(id)))));
+        LOGGER.info("Initializing {} clients", Config.N_CLIENTS);
+        IntStream.range(0, Config.N_CLIENTS).forEach(id -> clients.add(ActorMetadata.of(id, system.actorOf(Client.props(id)))));
 
         // --- Welcome ---
         // DataStores
@@ -71,7 +51,7 @@ public final class Main {
         final CoordinatorWelcomeMessage coordinatorWelcomeMessage = new CoordinatorWelcomeMessage(dataStores);
         coordinators.forEach(coordinator -> coordinator.ref.tell(coordinatorWelcomeMessage, ActorRef.noSender()));
         // Clients
-        final ClientWelcomeMessage clientWelcomeMessage = new ClientWelcomeMessage(coordinators, MAX_ITEM_KEY);
+        final ClientWelcomeMessage clientWelcomeMessage = new ClientWelcomeMessage(coordinators, Config.MAX_ITEM_KEY);
         clients.forEach(client -> client.ref.tell(clientWelcomeMessage, ActorRef.noSender()));
 
         // --- Run ---

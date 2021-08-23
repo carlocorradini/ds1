@@ -6,6 +6,7 @@ import it.unitn.disi.ds1.etc.DataStoreDecision;
 import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.etc.Decision;
 import it.unitn.disi.ds1.message.twopc.TwoPcDecisionMessage;
+import it.unitn.disi.ds1.message.twopc.TwoPcRecoveryMessage;
 import it.unitn.disi.ds1.message.twopc.TwoPcVoteResultMessage;
 import it.unitn.disi.ds1.message.snapshot.SnapshotMessage;
 import it.unitn.disi.ds1.message.snapshot.SnapshotResultMessage;
@@ -360,6 +361,11 @@ public final class Coordinator extends Actor {
             // Terminate transaction
             terminateTransaction(message.transactionId, decision);
         }
+    }
+
+    @Override
+    protected void onTwoPcRecoveryMessage(TwoPcRecoveryMessage message) {
+        // TODO
     }
 
     /**

@@ -3,6 +3,7 @@ package it.unitn.disi.ds1.actor;
 import akka.actor.Props;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.Item;
+import it.unitn.disi.ds1.message.twopc.TwoPcRecoveryMessage;
 import it.unitn.disi.ds1.message.txn.read.TxnReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.txn.read.TxnReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.txn.write.TxnWriteCoordinatorMessage;
@@ -323,6 +324,11 @@ public final class DataStore extends Actor {
 
         // Clean resources
         cleanResources(message.transactionId);
+    }
+
+    @Override
+    protected void onTwoPcRecoveryMessage(TwoPcRecoveryMessage message) {
+        // TODO
     }
 
     /**

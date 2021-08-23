@@ -7,6 +7,7 @@ import akka.actor.*;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.message.*;
+import it.unitn.disi.ds1.message.twopc.TwoPcRecoveryMessage;
 import it.unitn.disi.ds1.message.txn.read.TxnReadMessage;
 import it.unitn.disi.ds1.message.txn.read.TxnReadResultMessage;
 import it.unitn.disi.ds1.message.txn.write.TxnWriteMessage;
@@ -358,6 +359,11 @@ public final class Client extends Actor {
         }
 
         LOGGER.info("End TXN by Client {}", id);
+    }
+
+    @Override
+    protected void onTwoPcRecoveryMessage(TwoPcRecoveryMessage message) {
+        throw new UnsupportedOperationException(String.format("Client %d cannot be involved in a 2PC recovery operation", id));
     }
 
     /*-- Message handlers ----------------------------------------------------- */
