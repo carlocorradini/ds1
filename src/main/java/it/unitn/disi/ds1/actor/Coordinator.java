@@ -103,8 +103,8 @@ public final class Coordinator extends Actor {
                 .match(TxnWriteMessage.class, this::onTxnWriteMessage)
                 .match(TxnEndMessage.class, this::onTxnEndMessage)
                 .match(TwoPcVoteResultMessage.class, this::onTwoPcVoteResultMessage)
-                .match(TwoPcRecoveryMessage.class, this::onTwoPcRecoveryMessage)
                 .match(TwoPcDecisionRequestMessage.class, this::onTwoPcDecisionRequestMessage)
+                .match(TwoPcRecoveryMessage.class, this::onTwoPcRecoveryMessage)
                 .match(SnapshotMessage.class, this::onSnapshotMessage)
                 .match(SnapshotResultMessage.class, this::onSnapshotResultMessage)
                 .build();
