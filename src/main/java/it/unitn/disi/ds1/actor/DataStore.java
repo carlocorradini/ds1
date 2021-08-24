@@ -103,6 +103,7 @@ public final class DataStore extends Actor {
                 .match(TwoPcVoteMessage.class, this::onTwoPcVoteMessage)
                 .match(TwoPcDecisionMessage.class, this::onTwoPcDecisionMessage)
                 .match(TwoPcRecoveryMessage.class, this::onTwoPcRecoveryMessage)
+                .match(TwoPcTimeoutMessage.class,  this::onTwoPcTimeoutMessage)
                 .match(SnapshotMessage.class, this::onSnapshotMessage)
                 .build();
     }
@@ -386,7 +387,6 @@ public final class DataStore extends Actor {
                         LOGGER.debug("DataStore {} is recovering and has already known the final decision: {} for transaction {}", id, decision, transactionId);
                     }
                 });
-
     }
 
     /**
