@@ -5,9 +5,7 @@ import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.DataStoreDecision;
 import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.etc.Decision;
-import it.unitn.disi.ds1.message.twopc.TwoPcDecisionMessage;
-import it.unitn.disi.ds1.message.twopc.TwoPcRecoveryMessage;
-import it.unitn.disi.ds1.message.twopc.TwoPcVoteResultMessage;
+import it.unitn.disi.ds1.message.twopc.*;
 import it.unitn.disi.ds1.message.snapshot.SnapshotMessage;
 import it.unitn.disi.ds1.message.snapshot.SnapshotResultMessage;
 import it.unitn.disi.ds1.message.txn.TxnEndMessage;
@@ -18,7 +16,6 @@ import it.unitn.disi.ds1.message.txn.read.TxnReadMessage;
 import it.unitn.disi.ds1.message.txn.read.TxnReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.txn.write.TxnWriteCoordinatorMessage;
 import it.unitn.disi.ds1.message.txn.write.TxnWriteMessage;
-import it.unitn.disi.ds1.message.twopc.TwoPcVoteMessage;
 import it.unitn.disi.ds1.message.txn.TxnBeginResultMessage;
 import it.unitn.disi.ds1.message.txn.TxnBeginMessage;
 import it.unitn.disi.ds1.message.welcome.CoordinatorWelcomeMessage;
@@ -106,6 +103,8 @@ public final class Coordinator extends Actor {
                 .match(TxnWriteMessage.class, this::onTxnWriteMessage)
                 .match(TxnEndMessage.class, this::onTxnEndMessage)
                 .match(TwoPcVoteResultMessage.class, this::onTwoPcVoteResultMessage)
+                .match(TwoPcRecoveryMessage.class, this::onTwoPcRecoveryMessage)
+                .match(TwoPcDecisionRequestMessage.class, this::onTwoPcDecisionRequestMessage)
                 .match(SnapshotMessage.class, this::onSnapshotMessage)
                 .match(SnapshotResultMessage.class, this::onSnapshotResultMessage)
                 .build();
@@ -139,12 +138,15 @@ public final class Coordinator extends Actor {
     }
 
     /**
-     * Terminate the {@link UUID transaction} with the chosen decision.
+     * Terminate the {@link UUID transaction} with the chosen final decision.
      *
      * @param transactionId {@link UUID Transaction} id
-     * @param decision      Final {@link Decision decision}
      */
-    private void terminateTransaction(UUID transactionId, Decision decision) {
+    private void terminateTransaction(UUID transactionId) {
+        // Obtain final decision
+        final Decision decision = Optional.ofNullable(finalDecisions.get(transactionId))
+                .orElseThrow(() -> new IllegalStateException(String.format("Coordinator %d tried to terminate transaction %s without a final decision", id, transactionId)));
+
         // Data stores affected in current transaction
         final Set<ActorMetadata> affectedDataStores = dataStoresAffectedInTransaction.getOrDefault(transactionId, new HashSet<>());
 
@@ -316,14 +318,16 @@ public final class Coordinator extends Actor {
                 } else {
                     // No DataStore(s) affected
                     LOGGER.warn("Coordinator {} no DataStore(s) are affected in transaction {}", id, transactionId);
-                    terminateTransaction(transactionId, Decision.COMMIT);
+                    terminateTransaction(transactionId);
                 }
                 break;
             }
             case ABORT: {
                 // Client decided to abort
                 LOGGER.info("Coordinator {} informed that Client {} want to ABORT transaction {}", id, message.senderId, transactionId);
-                terminateTransaction(transactionId, Decision.ABORT);
+                // Store final decision
+                decide(transactionId, Decision.ABORT);
+                terminateTransaction(transactionId);
                 break;
             }
         }
@@ -358,14 +362,76 @@ public final class Coordinator extends Actor {
                 LOGGER.info("Coordinator {} decided to abort transaction {}: {}", id, message.transactionId, decisions);
             }
 
+            // Store final decision
+            decide(message.transactionId, decision);
+
             // Terminate transaction
-            terminateTransaction(message.transactionId, decision);
+            terminateTransaction(message.transactionId);
         }
     }
 
+    /**
+     * Callback for {@link TwoPcDecisionRequestMessage} message.
+     *
+     * @param message Received message
+     */
+    private void onTwoPcDecisionRequestMessage(TwoPcDecisionRequestMessage message) {
+        LOGGER.debug("Coordinator {} received from DataStore {} TwoPcDecisionRequest: {}", id, message.senderId, message);
+
+        // Check if it knows the final decision
+        if (hasDecided(message.transactionId)) {
+            // Obtain decision
+            final Decision decision = finalDecisions.get(message.transactionId);
+            final TwoPcDecisionMessage outMessage = new TwoPcDecisionMessage(id, message.transactionId, decision);
+            getSender().tell(outMessage, getSelf());
+            LOGGER.debug("Coordinator {} send to DataStore {} during 2PC decision request TwoPcDecisionMessage: {}", id, message.senderId, outMessage);
+        }
+    }
+
+    /**
+     * Callback for {@link TwoPcRecoveryMessage} message.
+     *
+     * @param message Received message
+     */
     @Override
     protected void onTwoPcRecoveryMessage(TwoPcRecoveryMessage message) {
-        // TODO
+        LOGGER.debug("Coordinator {} received TwoPcRecoveryMessage", id);
+
+        // Become normal
+        getContext().become(createReceive());
+        LOGGER.info("Coordinator {} recovering from crash", id);
+
+        dataStoresAffectedInTransaction
+                .keySet()
+                .forEach((transactionId) -> {
+                    // Final decision
+                    final Decision decision = finalDecisions.getOrDefault(transactionId, Decision.ABORT);
+
+                    if (!hasDecided(transactionId)) {
+                        // Crashed before final decision
+                        LOGGER.debug("Coordinator {} is recovering and has not decided yet for transaction {}: ABORT", id, transactionId);
+
+                        // Decide to ABORT
+                        decide(transactionId, Decision.ABORT);
+                    } else {
+                        // Crashed after final decision
+                        LOGGER.debug("Coordinator {} is recovering and has already decided for transaction {}: {}", id, transactionId, decision);
+                    }
+
+                    // Terminate transaction
+                    terminateTransaction(transactionId);
+                });
+    }
+
+
+    /**
+     * Callback for {@link TwoPcTimeoutMessage} message.
+     *
+     * @param message Received message
+     */
+    @Override
+    protected void onTwoPcTimeoutMessage(TwoPcTimeoutMessage message) {
+
     }
 
     /**

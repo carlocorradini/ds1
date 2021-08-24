@@ -1,5 +1,7 @@
 package it.unitn.disi.ds1.actor;
 
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -7,7 +9,6 @@ import akka.actor.*;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.message.*;
-import it.unitn.disi.ds1.message.twopc.TwoPcRecoveryMessage;
 import it.unitn.disi.ds1.message.txn.read.TxnReadMessage;
 import it.unitn.disi.ds1.message.txn.read.TxnReadResultMessage;
 import it.unitn.disi.ds1.message.txn.write.TxnWriteMessage;
@@ -21,7 +22,7 @@ import scala.concurrent.duration.Duration;
 /**
  * Client {@link Actor actor} class.
  */
-public final class Client extends Actor {
+public final class Client extends AbstractActor {
     /**
      * Logger.
      */
@@ -51,6 +52,11 @@ public final class Client extends Actor {
      * Random range.
      */
     private static final int RAND_LENGTH_RANGE = MAX_TXN_LENGTH - MIN_TXN_LENGTH + 1;
+
+    /**
+     * Client identifier.
+     */
+    public final int id;
 
     /**
      * {@link Coordinator Coordinator(s)} metadata.
@@ -118,6 +124,11 @@ public final class Client extends Actor {
      */
     private Cancellable txnAcceptTimeout;
 
+    /**
+     * {@link Random} instance.
+     */
+    private final Random random;
+
     // --- Constructors ---
 
     /**
@@ -126,10 +137,21 @@ public final class Client extends Actor {
      * @param id Client id
      */
     public Client(int id) {
-        super(id);
+        this.id = id;
         this.coordinators = new ArrayList<>();
         this.txnAttempted = 0;
         this.txnCommitted = 0;
+        // Initialize random with SecureRandom
+        Random r;
+        try {
+            r = SecureRandom.getInstanceStrong();
+        } catch (NoSuchAlgorithmException e) {
+            LOGGER.warn("Client {} Secure Random Number Generator (RNG) not found: {}. Fallback to standard Random", id, e.getMessage());
+            r = new Random();
+        }
+        this.random = r;
+
+
         LOGGER.debug("Client {} initialized", id);
     }
 
@@ -359,11 +381,6 @@ public final class Client extends Actor {
         }
 
         LOGGER.info("End TXN by Client {}", id);
-    }
-
-    @Override
-    protected void onTwoPcRecoveryMessage(TwoPcRecoveryMessage message) {
-        throw new UnsupportedOperationException(String.format("Client %d cannot be involved in a 2PC recovery operation", id));
     }
 
     /*-- Message handlers ----------------------------------------------------- */

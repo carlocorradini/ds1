@@ -3,14 +3,12 @@ package it.unitn.disi.ds1.actor;
 import akka.actor.Props;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.Item;
-import it.unitn.disi.ds1.message.twopc.TwoPcRecoveryMessage;
+import it.unitn.disi.ds1.message.Message;
+import it.unitn.disi.ds1.message.twopc.*;
 import it.unitn.disi.ds1.message.txn.read.TxnReadCoordinatorMessage;
 import it.unitn.disi.ds1.message.txn.read.TxnReadResultCoordinatorMessage;
 import it.unitn.disi.ds1.message.txn.write.TxnWriteCoordinatorMessage;
 import it.unitn.disi.ds1.etc.Decision;
-import it.unitn.disi.ds1.message.twopc.TwoPcDecisionMessage;
-import it.unitn.disi.ds1.message.twopc.TwoPcVoteMessage;
-import it.unitn.disi.ds1.message.twopc.TwoPcVoteResultMessage;
 import it.unitn.disi.ds1.message.snapshot.SnapshotMessage;
 import it.unitn.disi.ds1.message.snapshot.SnapshotResultMessage;
 import it.unitn.disi.ds1.message.welcome.DataStoreWelcomeMessage;
@@ -58,6 +56,12 @@ public final class DataStore extends Actor {
      */
     private final Map<UUID, Map<Integer, Item>> workspaces;
 
+    //TODO: controllare se va bene
+    private final Map<UUID, Decision> votes;
+
+    //TODO: controllare se va bene
+    private final Map<UUID, ActorMetadata> coordinators;
+
     // --- Constructors ---
 
     /**
@@ -70,6 +74,9 @@ public final class DataStore extends Actor {
         this.dataStores = new ArrayList<>();
         this.storage = new HashMap<>();
         this.workspaces = new HashMap<>();
+
+        this.votes = new HashMap<>();
+        this.coordinators = new HashMap<>();
 
         // Initialize items
         IntStream.range(id * 10, (id * 10) + 10).forEach(i -> storage.put(i, new Item(ITEM_DEFAULT_VALUE, ITEM_DEFAULT_VERSION)));
@@ -95,6 +102,7 @@ public final class DataStore extends Actor {
                 .match(TxnWriteCoordinatorMessage.class, this::onTxnWriteCoordinatorMessage)
                 .match(TwoPcVoteMessage.class, this::onTwoPcVoteMessage)
                 .match(TwoPcDecisionMessage.class, this::onTwoPcDecisionMessage)
+                .match(TwoPcRecoveryMessage.class, this::onTwoPcRecoveryMessage)
                 .match(SnapshotMessage.class, this::onSnapshotMessage)
                 .build();
     }
@@ -108,7 +116,7 @@ public final class DataStore extends Actor {
      * 2. Successfully locked items
      *
      * @param transactionId {@link UUID Transaction} id
-     * @return True if can commit, false otherwise
+     * @return True if it can commit, false otherwise
      */
     private synchronized boolean canCommit(UUID transactionId) {
         if (!lockItems(transactionId)) {
@@ -245,6 +253,9 @@ public final class DataStore extends Actor {
         final TxnReadResultCoordinatorMessage outMessage = new TxnReadResultCoordinatorMessage(id, message.transactionId, message.key, itemInWorkspace.getValue());
         getSender().tell(outMessage, getSelf());
         LOGGER.debug("DataStore {} send to Coordinator {} TxnReadResultCoordinatorMessage: {}", id, message.senderId, outMessage);
+
+        // Store coordinator with its transaction id
+        coordinators.put(message.transactionId, new ActorMetadata(message.senderId, getSender()));
     }
 
     /**
@@ -290,9 +301,13 @@ public final class DataStore extends Actor {
                 LOGGER.debug("DataStore {} received COMMIT decision from Coordinator {} involving transaction {} and decision is {}", id, message.senderId, message.transactionId, Decision.valueOf(canCommit));
 
                 // Send response to Coordinator
-                final TwoPcVoteResultMessage outMessage = new TwoPcVoteResultMessage(id, message.transactionId, Decision.valueOf(canCommit));
+                final Decision decision = Decision.valueOf(canCommit);
+                final TwoPcVoteResultMessage outMessage = new TwoPcVoteResultMessage(id, message.transactionId, decision);
                 getSender().tell(outMessage, getSender());
                 LOGGER.debug("DataStore {} send to Coordinator {} TwoPcVoteResultMessage: {}", id, message.senderId, outMessage);
+
+                // Store vote
+                votes.put(message.transactionId, decision);
                 break;
             }
             case ABORT:
@@ -319,6 +334,9 @@ public final class DataStore extends Actor {
                 // FIXME Rimuovere operation
                 storage.putAll(workspaces.get(message.transactionId));
                 LOGGER.info("DataStore {} successfully committed transaction {}: {}", id, message.transactionId, JsonUtil.GSON.toJson(workspace));
+
+                // Store final decision
+                decide(message.transactionId, message.decision);
             }
         }
 
@@ -326,8 +344,58 @@ public final class DataStore extends Actor {
         cleanResources(message.transactionId);
     }
 
+    /**
+     * Callback for {@link TwoPcRecoveryMessage} message.
+     *
+     * @param message Received message
+     */
     @Override
     protected void onTwoPcRecoveryMessage(TwoPcRecoveryMessage message) {
+        LOGGER.debug("Data store {} received TwoPcRecoveryMessage", id);
+
+        // Become normal
+        getContext().become(createReceive());
+        LOGGER.info("DataStore {} recovering from crash", id);
+
+        workspaces
+                .keySet()
+                .forEach(transactionId -> {
+                    // Check if not voted
+                    if (!votes.containsKey(transactionId)) {
+                        // Not voted
+                        LOGGER.debug("DataStore {} is recovering and has not voted yet for transaction {}", id, transactionId);
+                        // Save ABORT vote
+                        votes.put(transactionId, Decision.ABORT);
+                        // Inform myself to ABORT as final decision
+                        getSelf().tell(new TwoPcDecisionMessage(Message.NO_SENDER_ID, transactionId, Decision.ABORT), getSelf());
+                        LOGGER.info("DataStore {} is recovering safely ABORT for transaction {}", id, transactionId);
+                    }
+
+                    // Check if not decided
+                    if (!hasDecided(transactionId)) {
+                        // Obtain coordinator
+                        final ActorMetadata coordinator = coordinators.get(transactionId);
+                        // Out message
+                        final TwoPcDecisionRequestMessage outMessage = new TwoPcDecisionRequestMessage(id, transactionId);
+                        // Ask coordinator
+                        coordinator.ref.tell(outMessage, getSelf());
+                        LOGGER.debug("DataStore {} is recovering and ask Coordinator {} for decision involving transaction {}: {}", id, coordinator.id, transactionId, outMessage);
+                    } else {
+                        // Already know the final decision
+                        final Decision decision = finalDecisions.get(transactionId);
+                        LOGGER.debug("DataStore {} is recovering and has already known the final decision: {} for transaction {}", id, decision, transactionId);
+                    }
+                });
+
+    }
+
+    /**
+     * Callback for {@link TwoPcTimeoutMessage} message.
+     *
+     * @param message Received message
+     */
+    @Override
+    protected void onTwoPcTimeoutMessage(TwoPcTimeoutMessage message) {
         // TODO
     }
 

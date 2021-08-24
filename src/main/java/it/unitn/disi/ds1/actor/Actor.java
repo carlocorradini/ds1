@@ -6,6 +6,7 @@ import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.Decision;
 import it.unitn.disi.ds1.message.Message;
 import it.unitn.disi.ds1.message.twopc.TwoPcRecoveryMessage;
+import it.unitn.disi.ds1.message.twopc.TwoPcTimeoutMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import scala.concurrent.duration.Duration;
@@ -37,7 +38,7 @@ public abstract class Actor extends AbstractActor {
     /**
      * Final {@link Decision} of the Actor for a {@link UUID transaction}.
      */
-    protected final Map<UUID, Decision> decisions;
+    protected final Map<UUID, Decision> finalDecisions;
 
     /**
      * Construct a new Actor class.
@@ -46,14 +47,14 @@ public abstract class Actor extends AbstractActor {
      */
     public Actor(int id) {
         this.id = id;
-        this.decisions = new HashMap<>();
+        this.finalDecisions = new HashMap<>();
 
         // Initialize random with SecureRandom
         Random r;
         try {
             r = SecureRandom.getInstanceStrong();
         } catch (NoSuchAlgorithmException e) {
-            LOGGER.warn("Secure Random Number Generator (RNG) not found: {}. Fallback to standard Random", e.getMessage());
+            LOGGER.warn("Actor {} Secure Random Number Generator (RNG) not found: {}. Fallback to standard Random", id, e.getMessage());
             r = new Random();
         }
         this.random = r;
@@ -98,7 +99,7 @@ public abstract class Actor extends AbstractActor {
      * @return True if already decided, false otherwise
      */
     protected boolean hasDecided(UUID transactionId) {
-        return decisions.containsKey(transactionId);
+        return finalDecisions.containsKey(transactionId);
     }
 
     /**
@@ -108,7 +109,7 @@ public abstract class Actor extends AbstractActor {
      * @param decision      Actor decision
      */
     protected void decide(UUID transactionId, Decision decision) {
-        decisions.computeIfAbsent(transactionId, k -> {
+        finalDecisions.computeIfAbsent(transactionId, k -> {
             LOGGER.debug("Actor {} has decided to {} for transaction {}", id, decision, transactionId);
             return decision;
         });
@@ -133,7 +134,10 @@ public abstract class Actor extends AbstractActor {
      * Sleep.
      */
     protected void sleep() {
-        sleep(Config.SLEEP_TIMEOUT_MS);
+        sleep(random
+                .ints(Config.MIN_SLEEP_TIMEOUT_MS, Config.MAX_SLEEP_TIMEOUT_MS + 1)
+                .findFirst()
+                .orElse(Math.abs(Config.MAX_SLEEP_TIMEOUT_MS - Config.MIN_SLEEP_TIMEOUT_MS)));
     }
 
     /**
@@ -154,6 +158,7 @@ public abstract class Actor extends AbstractActor {
      * @param recoveryTimeout Timeout in ms before Actor recovery
      */
     protected void crash(int recoveryTimeout) {
+        // Become crashed
         getContext().become(crashed());
         LOGGER.info("Actor {} is crashed", id);
 
@@ -179,4 +184,11 @@ public abstract class Actor extends AbstractActor {
      * @param message Received message
      */
     protected abstract void onTwoPcRecoveryMessage(TwoPcRecoveryMessage message);
+
+    /**
+     * Callback for {@link TwoPcTimeoutMessage} message.
+     *
+     * @param message Received message
+     */
+    protected  abstract  void onTwoPcTimeoutMessage(TwoPcTimeoutMessage message);
 }

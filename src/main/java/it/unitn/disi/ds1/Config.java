@@ -33,9 +33,14 @@ public final class Config implements Serializable {
     public final static int MAX_ITEM_KEY = (N_DATA_STORES * 10) - 1;
 
     /**
-     * Sleep timeout (ms).
+     * Minimum sleep timeout (ms).
      */
-    public static final int SLEEP_TIMEOUT_MS = 1000;
+    public static final int MIN_SLEEP_TIMEOUT_MS = 1000;
+
+    /**
+     * Maximum sleep timeout (ms).
+     */
+    public static final int MAX_SLEEP_TIMEOUT_MS = 5000;
 
     /**
      * 2PC {@link it.unitn.disi.ds1.actor.Actor} recovery timeout (ms) after a crash.
