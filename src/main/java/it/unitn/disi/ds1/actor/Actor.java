@@ -178,6 +178,8 @@ public abstract class Actor extends AbstractActor {
         crash(Config.TWOPC_RECOVERY_TIMEOUT_MS);
     }
 
+    // TODO: timeout method
+
     /**
      * Callback for {@link TwoPcRecoveryMessage} message.
      *

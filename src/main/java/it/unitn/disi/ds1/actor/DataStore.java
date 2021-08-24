@@ -56,10 +56,14 @@ public final class DataStore extends Actor {
      */
     private final Map<UUID, Map<Integer, Item>> workspaces;
 
-    //TODO: controllare se va bene
+    /**
+     * Storage used for YES/NO taken by {@link DataStore} for each transaction.
+     */
     private final Map<UUID, Decision> votes;
 
-    //TODO: controllare se va bene
+    /**
+     * Storage used for saving {@link Coordinator} linked to transaction.
+     */
     private final Map<UUID, ActorMetadata> coordinators;
 
     // --- Constructors ---
@@ -102,8 +106,9 @@ public final class DataStore extends Actor {
                 .match(TxnWriteCoordinatorMessage.class, this::onTxnWriteCoordinatorMessage)
                 .match(TwoPcVoteMessage.class, this::onTwoPcVoteMessage)
                 .match(TwoPcDecisionMessage.class, this::onTwoPcDecisionMessage)
+                .match(TwoPcDecisionRequestMessage.class,  this::onTwoPcDecisionRequestMessage)
                 .match(TwoPcRecoveryMessage.class, this::onTwoPcRecoveryMessage)
-                .match(TwoPcTimeoutMessage.class,  this::onTwoPcTimeoutMessage)
+                .match(TwoPcTimeoutMessage.class, this::onTwoPcTimeoutMessage)
                 .match(SnapshotMessage.class, this::onSnapshotMessage)
                 .build();
     }
@@ -332,7 +337,6 @@ public final class DataStore extends Actor {
                 // Obtain private workspace of the transaction
                 final Map<Integer, Item> workspace = workspaces.get(message.transactionId);
                 // Commit
-                // FIXME Rimuovere operation
                 storage.putAll(workspaces.get(message.transactionId));
                 LOGGER.info("DataStore {} successfully committed transaction {}: {}", id, message.transactionId, JsonUtil.GSON.toJson(workspace));
 
@@ -343,6 +347,24 @@ public final class DataStore extends Actor {
 
         // Clean resources
         cleanResources(message.transactionId);
+    }
+
+    /**
+     * Callback for {@link TwoPcDecisionRequestMessage} message.
+     *
+     * @param message Received message
+     */
+    private void onTwoPcDecisionRequestMessage(TwoPcDecisionRequestMessage message) {
+        LOGGER.debug("DataStore {} received from another DataStore {} TwoPcDecisionRequest: {}", id, message.senderId, message);
+
+        // Check if it knows the final decision
+        if (hasDecided(message.transactionId)) {
+            // Obtain decision
+            final Decision decision = finalDecisions.get(message.transactionId);
+            final TwoPcDecisionMessage outMessage = new TwoPcDecisionMessage(id, message.transactionId, decision);
+            getSender().tell(outMessage, getSelf());
+            LOGGER.debug("DataStore {} send to another DataStore {} during 2PC decision request TwoPcDecisionMessage: {}", id, message.senderId, outMessage);
+        }
     }
 
     /**
@@ -396,7 +418,31 @@ public final class DataStore extends Actor {
      */
     @Override
     protected void onTwoPcTimeoutMessage(TwoPcTimeoutMessage message) {
-        // TODO
+        LOGGER.debug("DataStore {} received TwoPcTimeoutMessage: {}", id, message);
+
+        if (!votes.containsKey(message.transactionId)) {
+            final Decision decision = Decision.ABORT;
+            LOGGER.info("DataStore {} safely decide {} because it has not voted yet", id, decision);
+
+            // Timeout before vote
+            final TwoPcDecisionMessage outMessage = new TwoPcDecisionMessage(-1, message.transactionId, decision);
+            getSelf().tell(outMessage, getSelf());
+            LOGGER.debug("DataStore {} unilaterally abort for transaction {}", id, message.transactionId);
+
+            // Store the vote
+            votes.put(message.transactionId, decision);
+        }
+
+        if (!hasDecided(message.transactionId)) {
+            if (votes.get(message.transactionId) == Decision.COMMIT) {
+                LOGGER.info("DataStore {} voted commit  for transaction {} and ask around to know the final decision", id, message.transactionId);
+
+                final TwoPcDecisionRequestMessage outMessage = new TwoPcDecisionRequestMessage(id, message.transactionId);
+                multicast(dataStores, outMessage);
+            } else {
+                LOGGER.info("DataStore {} voted abort for transaction {}", id, message.transactionId);
+            }
+        }
     }
 
     /**

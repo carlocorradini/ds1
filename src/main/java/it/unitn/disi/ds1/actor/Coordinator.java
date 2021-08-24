@@ -431,7 +431,16 @@ public final class Coordinator extends Actor {
      */
     @Override
     protected void onTwoPcTimeoutMessage(TwoPcTimeoutMessage message) {
+        LOGGER.debug("Coordinator {} received TwoPcTimeoutMessage: {}", id, message);
 
+        if (!hasDecided(message.transactionId)) {
+            LOGGER.debug("Coordinator {} has not decided yet for transaction {}", id, message.transactionId);
+
+            // Decide to ABORT
+            decide(message.transactionId, Decision.ABORT);
+            //Terminate transaction
+            terminateTransaction(message.transactionId);
+        }
     }
 
     /**
