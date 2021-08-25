@@ -178,7 +178,35 @@ public abstract class Actor extends AbstractActor {
         crash(Config.TWOPC_RECOVERY_TIMEOUT_MS);
     }
 
-    // TODO: timeout method
+    /**
+     * Simulate Actor timeout.
+     *
+     * @param time          Timeout in ms
+     * @param transactionId Transaction id during timeout
+     */
+    // TODO: check
+    protected void timeout(int time, UUID transactionId) {
+        getContext().system().scheduler().scheduleOnce(
+                Duration.create(time, TimeUnit.MILLISECONDS),
+                getSelf(),
+                new TwoPcTimeoutMessage(transactionId),
+                getContext().system().dispatcher(),
+                getSelf()
+        );
+    }
+
+    /**
+     * Simulate Actor timeout.
+     *
+     * @param transactionId Transaction id during timeout
+     */
+    // TODO: check
+    protected void timeout(UUID transactionId) {
+        timeout(random
+                .ints(Config.MIN_SLEEP_TIMEOUT_MS, Config.MAX_SLEEP_TIMEOUT_MS + 1)
+                .findFirst()
+                .orElse(Math.abs(Config.MAX_SLEEP_TIMEOUT_MS - Config.MIN_SLEEP_TIMEOUT_MS)), transactionId);
+    }
 
     /**
      * Callback for {@link TwoPcRecoveryMessage} message.
@@ -192,5 +220,5 @@ public abstract class Actor extends AbstractActor {
      *
      * @param message Received message
      */
-    protected  abstract  void onTwoPcTimeoutMessage(TwoPcTimeoutMessage message);
+    protected abstract void onTwoPcTimeoutMessage(TwoPcTimeoutMessage message);
 }

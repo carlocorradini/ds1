@@ -59,12 +59,12 @@ public final class DataStore extends Actor {
     /**
      * Storage used for YES/NO taken by {@link DataStore} for each transaction.
      */
-    private final Map<UUID, Decision> votes;
+    private final Map<UUID, Decision> transactionVotes;
 
     /**
      * Storage used for saving {@link Coordinator} linked to transaction.
      */
-    private final Map<UUID, ActorMetadata> coordinators;
+    private final Map<UUID, ActorMetadata> transactionIdToCoordinator;
 
     // --- Constructors ---
 
@@ -79,8 +79,8 @@ public final class DataStore extends Actor {
         this.storage = new HashMap<>();
         this.workspaces = new HashMap<>();
 
-        this.votes = new HashMap<>();
-        this.coordinators = new HashMap<>();
+        this.transactionVotes = new HashMap<>();
+        this.transactionIdToCoordinator = new HashMap<>();
 
         // Initialize items
         IntStream.range(id * 10, (id * 10) + 10).forEach(i -> storage.put(i, new Item(ITEM_DEFAULT_VALUE, ITEM_DEFAULT_VERSION)));
@@ -261,7 +261,7 @@ public final class DataStore extends Actor {
         LOGGER.debug("DataStore {} send to Coordinator {} TxnReadResultCoordinatorMessage: {}", id, message.senderId, outMessage);
 
         // Store coordinator with its transaction id
-        coordinators.put(message.transactionId, new ActorMetadata(message.senderId, getSender()));
+        transactionIdToCoordinator.put(message.transactionId, new ActorMetadata(message.senderId, getSender()));
     }
 
     /**
@@ -313,7 +313,7 @@ public final class DataStore extends Actor {
                 LOGGER.debug("DataStore {} send to Coordinator {} TwoPcVoteResultMessage: {}", id, message.senderId, outMessage);
 
                 // Store vote
-                votes.put(message.transactionId, decision);
+                transactionVotes.put(message.transactionId, decision);
                 break;
             }
             case ABORT:
@@ -384,11 +384,11 @@ public final class DataStore extends Actor {
                 .keySet()
                 .forEach(transactionId -> {
                     // Check if not voted
-                    if (!votes.containsKey(transactionId)) {
+                    if (!transactionVotes.containsKey(transactionId)) {
                         // Not voted
                         LOGGER.debug("DataStore {} is recovering and has not voted yet for transaction {}", id, transactionId);
                         // Save ABORT vote
-                        votes.put(transactionId, Decision.ABORT);
+                        transactionVotes.put(transactionId, Decision.ABORT);
                         // Inform myself to ABORT as final decision
                         getSelf().tell(new TwoPcDecisionMessage(Message.NO_SENDER_ID, transactionId, Decision.ABORT), getSelf());
                         LOGGER.info("DataStore {} is recovering safely ABORT for transaction {}", id, transactionId);
@@ -397,7 +397,7 @@ public final class DataStore extends Actor {
                     // Check if not decided
                     if (!hasDecided(transactionId)) {
                         // Obtain coordinator
-                        final ActorMetadata coordinator = coordinators.get(transactionId);
+                        final ActorMetadata coordinator = transactionIdToCoordinator.get(transactionId);
                         // Out message
                         final TwoPcDecisionRequestMessage outMessage = new TwoPcDecisionRequestMessage(id, transactionId);
                         // Ask coordinator
@@ -420,7 +420,7 @@ public final class DataStore extends Actor {
     protected void onTwoPcTimeoutMessage(TwoPcTimeoutMessage message) {
         LOGGER.debug("DataStore {} received TwoPcTimeoutMessage: {}", id, message);
 
-        if (!votes.containsKey(message.transactionId)) {
+        if (!transactionVotes.containsKey(message.transactionId)) {
             final Decision decision = Decision.ABORT;
             LOGGER.info("DataStore {} safely decide {} because it has not voted yet", id, decision);
 
@@ -430,11 +430,11 @@ public final class DataStore extends Actor {
             LOGGER.debug("DataStore {} unilaterally abort for transaction {}", id, message.transactionId);
 
             // Store the vote
-            votes.put(message.transactionId, decision);
+            transactionVotes.put(message.transactionId, decision);
         }
 
         if (!hasDecided(message.transactionId)) {
-            if (votes.get(message.transactionId) == Decision.COMMIT) {
+            if (transactionVotes.get(message.transactionId) == Decision.COMMIT) {
                 LOGGER.info("DataStore {} voted commit  for transaction {} and ask around to know the final decision", id, message.transactionId);
 
                 final TwoPcDecisionRequestMessage outMessage = new TwoPcDecisionRequestMessage(id, message.transactionId);
