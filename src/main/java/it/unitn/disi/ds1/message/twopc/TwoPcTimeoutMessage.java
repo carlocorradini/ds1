@@ -1,5 +1,6 @@
 package it.unitn.disi.ds1.message.twopc;
 
+import com.google.gson.annotations.Expose;
 import it.unitn.disi.ds1.util.JsonUtil;
 
 import java.io.Serializable;
@@ -12,6 +13,10 @@ import java.util.UUID;
 public class TwoPcTimeoutMessage implements Serializable {
     private static final long serialVersionUID = 3387272272729304297L;
 
+    /**
+     * Transaction id.
+     */
+    @Expose
     public final UUID transactionId;
 
     /**
