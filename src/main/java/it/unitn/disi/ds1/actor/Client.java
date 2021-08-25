@@ -8,7 +8,6 @@ import java.util.concurrent.TimeUnit;
 import akka.actor.*;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.Item;
-import it.unitn.disi.ds1.message.*;
 import it.unitn.disi.ds1.message.txn.read.TxnReadMessage;
 import it.unitn.disi.ds1.message.txn.read.TxnReadResultMessage;
 import it.unitn.disi.ds1.message.txn.write.TxnWriteMessage;
@@ -173,6 +172,7 @@ public final class Client extends AbstractActor {
                 .match(TxnBeginTimeoutMessage.class, this::onTxnBeginTimeoutMessage)
                 .match(TxnReadResultMessage.class, this::onTxnReadResultMessage)
                 .match(TxnEndResultMessage.class, this::onTxnEndResultMsg)
+                .match(TxnStopMessage.class,  this::onTxnStopMessage)
                 .build();
     }
 
@@ -383,10 +383,12 @@ public final class Client extends AbstractActor {
         LOGGER.info("End TXN by Client {}", id);
     }
 
-    /*-- Message handlers ----------------------------------------------------- */
-    // TODO
-    private void onStopMsg(StopMsg msg) {
+    /**
+     * Callback for {@link TxnStopMessage} message.
+     *
+     * @param message Received message
+     */
+    private void onTxnStopMessage(TxnStopMessage message) {
         getContext().stop(getSelf());
     }
-
 }
