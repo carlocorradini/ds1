@@ -328,7 +328,7 @@ public final class Client extends AbstractActor {
             LOGGER.debug("Client {} start a new transaction due to timeout", id);
             beginTxn();
         } else {
-            LOGGER.warn("Client {} ignoring timeout since there is a transaction request running", id);
+            LOGGER.warn("Client {} ignoring timeout since there is a transaction running", id);
         }
     }
 
