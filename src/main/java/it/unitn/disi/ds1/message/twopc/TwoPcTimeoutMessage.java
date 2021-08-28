@@ -10,7 +10,7 @@ import java.util.UUID;
  * Message for {@link it.unitn.disi.ds1.actor.Coordinator} or {@link it.unitn.disi.ds1.actor.DataStore}
  * for communicating a timeout.
  */
-public class TwoPcTimeoutMessage implements Serializable {
+public final class TwoPcTimeoutMessage implements Serializable {
     private static final long serialVersionUID = 3387272272729304297L;
 
     /**

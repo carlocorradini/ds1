@@ -181,13 +181,12 @@ public abstract class Actor extends AbstractActor {
     /**
      * Simulate Actor timeout.
      *
-     * @param time          Timeout in ms
+     * @param timeout       Timeout in ms
      * @param transactionId Transaction id during timeout
      */
-    // TODO: check
-    protected void timeout(int time, UUID transactionId) {
+    protected void timeout(int timeout, UUID transactionId) {
         getContext().system().scheduler().scheduleOnce(
-                Duration.create(time, TimeUnit.MILLISECONDS),
+                Duration.create(timeout, TimeUnit.MILLISECONDS),
                 getSelf(),
                 new TwoPcTimeoutMessage(transactionId),
                 getContext().system().dispatcher(),
@@ -200,7 +199,6 @@ public abstract class Actor extends AbstractActor {
      *
      * @param transactionId Transaction id during timeout
      */
-    // TODO: check
     protected void timeout(UUID transactionId) {
         timeout(random
                 .ints(Config.MIN_SLEEP_TIMEOUT_MS, Config.MAX_SLEEP_TIMEOUT_MS + 1)

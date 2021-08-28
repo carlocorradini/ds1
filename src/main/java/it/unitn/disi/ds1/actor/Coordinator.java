@@ -2,7 +2,6 @@ package it.unitn.disi.ds1.actor;
 
 import akka.actor.Props;
 import it.unitn.disi.ds1.etc.ActorMetadata;
-import it.unitn.disi.ds1.etc.DataStoreDecision;
 import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.etc.Decision;
 import it.unitn.disi.ds1.message.twopc.*;
@@ -55,9 +54,9 @@ public final class Coordinator extends Actor {
     private final Map<UUID, Set<ActorMetadata>> dataStoresAffectedInTransaction;
 
     /**
-     * {@link DataStore DataStore(s)} decisions for a {@link UUID transaction}.
+     * Number of {@link DataStore DataStore(s)} that has decided to COMMIT for {@link UUID transaction}.
      */
-    private final Map<UUID, Set<DataStoreDecision>> transactionDecisions;
+    private final Map<UUID, Integer> transactionDecisions;
 
     /**
      * {@link DataStore DataStore(s)} storage snapshot(s).
@@ -124,17 +123,6 @@ public final class Coordinator extends Actor {
                 .filter(dataStore -> dataStore.id == dataStoreId)
                 .findFirst()
                 .orElseThrow(() -> new NullPointerException(String.format("Coordinator %d is unable to obtain DataStore %d via Item key %d", id, dataStoreId, key)));
-    }
-
-    /**
-     * Return true if all {@link DataStore} in decisions have decided to commit, otherwise false.
-     *
-     * @param decisions DataStores decisions
-     * @return True can commit, otherwise not
-     */
-    private boolean canCommit(Set<DataStoreDecision> decisions) {
-        return decisions.stream()
-                .allMatch(decision -> decision.decision == Decision.COMMIT);
     }
 
     /**
@@ -339,28 +327,34 @@ public final class Coordinator extends Actor {
      * @param message Received message
      */
     private void onTwoPcVoteResultMessage(TwoPcVoteResultMessage message) {
+        // Check if already decided
+        if (hasDecided(message.transactionId)) {
+            LOGGER.warn("Coordinator {} received from DataStore {} TwoPcVoteResultMessage when has already decided to {} for transaction {}", id, message.senderId, finalDecisions.get(message.transactionId), message.transactionId);
+            return;
+        }
+
         LOGGER.debug("Coordinator {} received from DataStore {} TwoPcVoteResultMessage: {}", id, message.senderId, message);
 
-        // Obtain or create DataStore(s) decisions
-        final Set<DataStoreDecision> decisions = transactionDecisions.computeIfAbsent(message.transactionId, k -> new HashSet<>());
-        // Add decision of the DataStore
-        decisions.add(DataStoreDecision.of(message.senderId, message.decision));
+        // Check if the vote is ABORT, terminate transaction
+        if (message.decision == Decision.ABORT) {
+            LOGGER.info("Coordinator {} received from DataStore {} the vote to ABORT for transaction {}", id, message.senderId, message.transactionId);
+            LOGGER.info("Coordinator {} decided to ABORT transaction {}", id, message.transactionId);
+            decide(message.transactionId, Decision.ABORT);
+            terminateTransaction(message.transactionId);
+            return;
+        }
+
+        // Increment or create counter decisions
+        final int decisions= transactionDecisions.compute(message.transactionId, (k,v) -> v != null ? v+1 : 1);
 
         // Data stores affected in current transaction
         final Set<ActorMetadata> affectedDataStores = dataStoresAffectedInTransaction.getOrDefault(message.transactionId, new HashSet<>());
 
-        // Check if the number of decisions has reached all affected DataStore(s)
-        if (decisions.size() == affectedDataStores.size()) {
-            final Decision decision;
-
-            // Obtain final decision if commit or abort
-            if (canCommit(decisions)) {
-                decision = Decision.COMMIT;
-                LOGGER.info("Coordinator {} decided to commit transaction {}: {}", id, message.transactionId, decisions);
-            } else {
-                decision = Decision.ABORT;
-                LOGGER.info("Coordinator {} decided to abort transaction {}: {}", id, message.transactionId, decisions);
-            }
+        // Check if counter decision has reached all affected DataStore(s)
+        if (decisions == affectedDataStores.size()) {
+            // All voted to COMMIT, COMMIT
+            final Decision decision = Decision.COMMIT;
+            LOGGER.info("Coordinator {} decided to COMMIT transaction {}", id, message.transactionId);
 
             // Store final decision
             decide(message.transactionId, decision);
@@ -434,12 +428,17 @@ public final class Coordinator extends Actor {
         LOGGER.debug("Coordinator {} received TwoPcTimeoutMessage: {}", id, message);
 
         if (!hasDecided(message.transactionId)) {
-            LOGGER.debug("Coordinator {} has not decided yet for transaction {}", id, message.transactionId);
+            LOGGER.info("Coordinator {} in timeout has not decided yet for transaction {}", id, message.transactionId);
 
             // Decide to ABORT
             decide(message.transactionId, Decision.ABORT);
+            LOGGER.debug("Coordinator {} in timeout unilaterally ABORT for transaction {}", id, message.transactionId);
+
             //Terminate transaction
             terminateTransaction(message.transactionId);
+        } else {
+            final Decision decision = finalDecisions.get(message.transactionId);
+            LOGGER.info("Coordinator {} in timeout has already decided to {} for transaction {}", id, decision, message.transactionId);
         }
     }
 

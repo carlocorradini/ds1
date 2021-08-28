@@ -78,7 +78,6 @@ public final class DataStore extends Actor {
         this.dataStores = new ArrayList<>();
         this.storage = new HashMap<>();
         this.workspaces = new HashMap<>();
-
         this.transactionVotes = new HashMap<>();
         this.transactionIdToCoordinator = new HashMap<>();
 
@@ -106,7 +105,7 @@ public final class DataStore extends Actor {
                 .match(TxnWriteCoordinatorMessage.class, this::onTxnWriteCoordinatorMessage)
                 .match(TwoPcVoteMessage.class, this::onTwoPcVoteMessage)
                 .match(TwoPcDecisionMessage.class, this::onTwoPcDecisionMessage)
-                .match(TwoPcDecisionRequestMessage.class,  this::onTwoPcDecisionRequestMessage)
+                .match(TwoPcDecisionRequestMessage.class, this::onTwoPcDecisionRequestMessage)
                 .match(TwoPcRecoveryMessage.class, this::onTwoPcRecoveryMessage)
                 .match(TwoPcTimeoutMessage.class, this::onTwoPcTimeoutMessage)
                 .match(SnapshotMessage.class, this::onSnapshotMessage)
@@ -355,7 +354,7 @@ public final class DataStore extends Actor {
      * @param message Received message
      */
     private void onTwoPcDecisionRequestMessage(TwoPcDecisionRequestMessage message) {
-        LOGGER.debug("DataStore {} received from another DataStore {} TwoPcDecisionRequest: {}", id, message.senderId, message);
+        LOGGER.debug("DataStore {} received from Actor {} TwoPcDecisionRequest: {}", id, message.senderId, message);
 
         // Check if it knows the final decision
         if (hasDecided(message.transactionId)) {
@@ -420,28 +419,30 @@ public final class DataStore extends Actor {
     protected void onTwoPcTimeoutMessage(TwoPcTimeoutMessage message) {
         LOGGER.debug("DataStore {} received TwoPcTimeoutMessage: {}", id, message);
 
+        // Check if not voted
         if (!transactionVotes.containsKey(message.transactionId)) {
+            // Not voted
             final Decision decision = Decision.ABORT;
-            LOGGER.info("DataStore {} safely decide {} because it has not voted yet", id, decision);
-
-            // Timeout before vote
-            final TwoPcDecisionMessage outMessage = new TwoPcDecisionMessage(-1, message.transactionId, decision);
-            getSelf().tell(outMessage, getSelf());
-            LOGGER.debug("DataStore {} unilaterally abort for transaction {}", id, message.transactionId);
+            LOGGER.info("DataStore {} in timeout safely decide to {} because it has not voted yet", id, decision);
 
             // Store the vote
             transactionVotes.put(message.transactionId, decision);
+
+            // Timeout before vote
+            final TwoPcDecisionMessage outMessage = new TwoPcDecisionMessage(Message.NO_SENDER_ID, message.transactionId, decision);
+            getSelf().tell(outMessage, getSelf());
+            LOGGER.debug("DataStore {} in timeout unilaterally ABORT for transaction {}", id, message.transactionId);
         }
 
-        if (!hasDecided(message.transactionId)) {
-            if (transactionVotes.get(message.transactionId) == Decision.COMMIT) {
-                LOGGER.info("DataStore {} voted commit  for transaction {} and ask around to know the final decision", id, message.transactionId);
+        // Check if not decided and voted YES
+        if (!hasDecided(message.transactionId) && transactionVotes.get(message.transactionId) == Decision.COMMIT) {
+            LOGGER.info("DataStore {} in timeout voted COMMIT for transaction {} and ask around to know the final decision", id, message.transactionId);
 
-                final TwoPcDecisionRequestMessage outMessage = new TwoPcDecisionRequestMessage(id, message.transactionId);
-                multicast(dataStores, outMessage);
-            } else {
-                LOGGER.info("DataStore {} voted abort for transaction {}", id, message.transactionId);
-            }
+            final TwoPcDecisionRequestMessage outMessage = new TwoPcDecisionRequestMessage(id, message.transactionId);
+            multicast(dataStores, outMessage);
+        } else {
+            final Decision decision = hasDecided(message.transactionId) ? finalDecisions.get(message.transactionId) : transactionVotes.getOrDefault(message.transactionId, Decision.ABORT);
+            LOGGER.info("DataStore {} in timeout voted {} for transaction {}", id, decision, message.transactionId);
         }
     }
 
