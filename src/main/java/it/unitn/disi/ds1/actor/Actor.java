@@ -1,6 +1,7 @@
 package it.unitn.disi.ds1.actor;
 
 import akka.actor.AbstractActor;
+import akka.actor.Cancellable;
 import it.unitn.disi.ds1.Config;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.Decision;
@@ -41,6 +42,11 @@ public abstract class Actor extends AbstractActor {
     protected final Map<UUID, Decision> finalDecisions;
 
     /**
+     * {@link UUID Transaction} {@link Cancellable timeout}.
+     */
+    protected final Map<UUID, Cancellable> transactionsTimeout;
+
+    /**
      * Construct a new Actor class.
      *
      * @param id Actor identifier
@@ -48,6 +54,7 @@ public abstract class Actor extends AbstractActor {
     public Actor(int id) {
         this.id = id;
         this.finalDecisions = new HashMap<>();
+        this.transactionsTimeout = new HashMap<>();
 
         // Initialize random with SecureRandom
         Random r;
@@ -162,6 +169,10 @@ public abstract class Actor extends AbstractActor {
         getContext().become(crashed());
         LOGGER.info("Actor {} is crashed", id);
 
+        // Cancel all timeout(s)
+        transactionsTimeout.values().forEach(Cancellable::cancel);
+        transactionsTimeout.clear();
+
         getContext().system().scheduler().scheduleOnce(
                 Duration.create(recoveryTimeout, TimeUnit.MILLISECONDS),
                 getSelf(),
@@ -181,17 +192,17 @@ public abstract class Actor extends AbstractActor {
     /**
      * Simulate Actor timeout.
      *
-     * @param timeout       Timeout in ms
      * @param transactionId Transaction id during timeout
+     * @param timeout       Timeout in ms
      */
-    protected void timeout(int timeout, UUID transactionId) {
-        getContext().system().scheduler().scheduleOnce(
+    protected void timeout(UUID transactionId, int timeout) {
+        unTimeout(transactionId);
+        transactionsTimeout.put(transactionId, getContext().system().scheduler().scheduleOnce(
                 Duration.create(timeout, TimeUnit.MILLISECONDS),
                 getSelf(),
                 new TwoPcTimeoutMessage(transactionId),
                 getContext().system().dispatcher(),
-                getSelf()
-        );
+                getSelf()));
     }
 
     /**
@@ -200,10 +211,23 @@ public abstract class Actor extends AbstractActor {
      * @param transactionId Transaction id during timeout
      */
     protected void timeout(UUID transactionId) {
-        timeout(random
-                .ints(Config.MIN_SLEEP_TIMEOUT_MS, Config.MAX_SLEEP_TIMEOUT_MS + 1)
-                .findFirst()
-                .orElse(Math.abs(Config.MAX_SLEEP_TIMEOUT_MS - Config.MIN_SLEEP_TIMEOUT_MS)), transactionId);
+        timeout(transactionId,
+                random
+                        .ints(Config.MIN_SLEEP_TIMEOUT_MS, Config.MAX_SLEEP_TIMEOUT_MS + 1)
+                        .findFirst()
+                        .orElse(Math.abs(Config.MAX_SLEEP_TIMEOUT_MS - Config.MIN_SLEEP_TIMEOUT_MS)));
+    }
+
+    /**
+     * Remove (and cancel), if present, the {@link Cancellable timeout} of the {@link UUID transaction}.
+     *
+     * @param transactionId Transaction id during timeout
+     */
+    protected void unTimeout(UUID transactionId) {
+        transactionsTimeout.compute(transactionId, (k, v) -> {
+            if (v != null) v.cancel();
+            return null;
+        });
     }
 
     /**

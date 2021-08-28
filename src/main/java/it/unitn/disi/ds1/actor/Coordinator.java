@@ -131,6 +131,9 @@ public final class Coordinator extends Actor {
      * @param transactionId {@link UUID Transaction} id
      */
     private void terminateTransaction(UUID transactionId) {
+        // Cancel timeout
+        unTimeout(transactionId);
+
         // Obtain final decision
         final Decision decision = Optional.ofNullable(finalDecisions.get(transactionId))
                 .orElseThrow(() -> new IllegalStateException(String.format("Coordinator %d tried to terminate transaction %s without a final decision", id, transactionId)));
@@ -164,6 +167,7 @@ public final class Coordinator extends Actor {
     private void cleanResources(UUID transactionId) {
         if (transactionId == null) return;
 
+        unTimeout(transactionId);
         transactionIdToClient.remove(transactionId);
         clientIdToTransactionId.values().remove(transactionId);
         dataStoresAffectedInTransaction.remove(transactionId);
@@ -303,6 +307,8 @@ public final class Coordinator extends Actor {
                         LOGGER.trace("Coordinator {} send to affected DataStore {} if can COMMIT transaction {} TwoPcVoteMessage: {}", id, dataStore.id, transactionId, outMessage);
                     });
                     LOGGER.debug("Coordinator {} send to {} affected DataStore(s) if can COMMIT transaction {} TwoPcVoteMessage: {}", id, affectedDataStores.size(), transactionId, outMessage);
+                    // Schedule timeout
+                    timeout(transactionId);
                 } else {
                     // No DataStore(s) affected
                     LOGGER.warn("Coordinator {} no DataStore(s) are affected in transaction {}", id, transactionId);
@@ -345,7 +351,7 @@ public final class Coordinator extends Actor {
         }
 
         // Increment or create counter decisions
-        final int decisions= transactionDecisions.compute(message.transactionId, (k,v) -> v != null ? v+1 : 1);
+        final int decisions = transactionDecisions.compute(message.transactionId, (k, v) -> v != null ? v + 1 : 1);
 
         // Data stores affected in current transaction
         final Set<ActorMetadata> affectedDataStores = dataStoresAffectedInTransaction.getOrDefault(message.transactionId, new HashSet<>());
@@ -426,6 +432,8 @@ public final class Coordinator extends Actor {
     @Override
     protected void onTwoPcTimeoutMessage(TwoPcTimeoutMessage message) {
         LOGGER.debug("Coordinator {} received TwoPcTimeoutMessage: {}", id, message);
+        // Clear the timeout for transaction
+        unTimeout(message.transactionId);
 
         if (!hasDecided(message.transactionId)) {
             LOGGER.info("Coordinator {} in timeout has not decided yet for transaction {}", id, message.transactionId);
@@ -435,7 +443,7 @@ public final class Coordinator extends Actor {
             LOGGER.debug("Coordinator {} in timeout unilaterally ABORT for transaction {}", id, message.transactionId);
 
             //Terminate transaction
-            terminateTransaction(message.transactionId);
+
         } else {
             final Decision decision = finalDecisions.get(message.transactionId);
             LOGGER.info("Coordinator {} in timeout has already decided to {} for transaction {}", id, decision, message.transactionId);
