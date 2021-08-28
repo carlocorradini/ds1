@@ -130,8 +130,9 @@ public final class Coordinator extends Actor {
      * Terminate the {@link UUID transaction} with the chosen final decision.
      *
      * @param transactionId {@link UUID Transaction} id
+     * @param crash         Crash state enabled
      */
-    private void terminateTransaction(UUID transactionId) {
+    private void terminateTransaction(UUID transactionId, boolean crash) {
         // Cancel timeout
         unTimeout(transactionId);
 
@@ -144,11 +145,22 @@ public final class Coordinator extends Actor {
 
         // Communicate decision to all affected DataStore(s), if any
         final TwoPcDecisionMessage outMessageToDataStore = new TwoPcDecisionMessage(id, transactionId, decision);
-        affectedDataStores.forEach(dataStore -> {
-            dataStore.ref.tell(outMessageToDataStore, getSender());
-            LOGGER.trace("Coordinator {} send to affected DataStore {} to {} transaction {} TwoPcDecisionMessage: {}", id, dataStore.id, decision, transactionId, outMessageToDataStore);
-        });
         LOGGER.debug("Coordinator {} send to {} affected DataStore(s) to {} transaction {} TwoPcDecisionMessage: {}", id, affectedDataStores.size(), decision, transactionId, outMessageToDataStore);
+        if (!crash || !Config.CRASH_ENABLED) {
+            // No crash
+            multicast(affectedDataStores, outMessageToDataStore);
+        } else if (Config.CRASH_COORDINATOR_DECISION_FIRST) {
+            // Crash after first decision
+            multicast(affectedDataStores, outMessageToDataStore, Crash.AFTER_FIRST_MESSAGE);
+        } else if (Config.CRASH_COORDINATOR_DECISION_ALL) {
+            // Crash after all decision(s)
+            multicast(affectedDataStores, outMessageToDataStore, Crash.AFTER_ALL_MESSAGES);
+        } else {
+            throw new IllegalStateException(String.format("Coordinator %d unknown crash configuration state", id));
+        }
+
+        // Stop execution if crash enabled
+        if (crash) return;
 
         // Communicate commit decision to Client
         final ActorMetadata client = transactionIdToClient.get(transactionId);
@@ -158,6 +170,15 @@ public final class Coordinator extends Actor {
 
         // Clean resources
         cleanResources(transactionId);
+    }
+
+    /**
+     * Terminate the {@link UUID transaction} with the chosen final decision.
+     *
+     * @param transactionId {@link UUID Transaction} id
+     */
+    private void terminateTransaction(UUID transactionId) {
+        terminateTransaction(transactionId, false);
     }
 
     /**
@@ -317,15 +338,25 @@ public final class Coordinator extends Actor {
                 // Check if there is at least one affected DataStore
                 if (!affectedDataStores.isEmpty()) {
                     // DataStore(s) affected
-                    final TwoPcVoteMessage outMessage = new TwoPcVoteMessage(id, transactionId, Decision.COMMIT);
-                    affectedDataStores.forEach(dataStore -> {
-                        dataStore.ref.tell(outMessage, getSelf());
-                        LOGGER.trace("Coordinator {} send to affected DataStore {} if can COMMIT transaction {} TwoPcVoteMessage: {}", id, dataStore.id, transactionId, outMessage);
-                    });
-                    LOGGER.debug("Coordinator {} send to {} affected DataStore(s) if can COMMIT transaction {} TwoPcVoteMessage: {}", id, affectedDataStores.size(), transactionId, outMessage);
 
                     // Schedule timeout
                     timeout(transactionId, Config.TWOPC_VOTE_TIMEOUT_MS);
+
+                    // Send vote request to all affected DataStore(s) in transaction
+                    final TwoPcVoteMessage outMessage = new TwoPcVoteMessage(id, transactionId, Decision.COMMIT);
+                    LOGGER.debug("Coordinator {} send to {} affected DataStore(s) if can COMMIT transaction {} TwoPcVoteMessage: {}", id, affectedDataStores.size(), transactionId, outMessage);
+                    if (!Config.CRASH_ENABLED) {
+                        // No crash
+                        multicast(affectedDataStores, outMessage);
+                    } else if (Config.CRASH_COORDINATOR_VOTE_FIRST) {
+                        // Crash after first vote
+                        multicast(affectedDataStores, outMessage, Crash.AFTER_FIRST_MESSAGE);
+                    } else if (Config.CRASH_COORDINATOR_VOTE_ALL) {
+                        // Crash after all vote(s)
+                        multicast(affectedDataStores, outMessage, Crash.AFTER_ALL_MESSAGES);
+                    } else {
+                        throw new IllegalStateException(String.format("Coordinator %d unknown crash configuration state", id));
+                    }
                 } else {
                     // No DataStore(s) affected
                     LOGGER.warn("Coordinator {} no DataStore(s) are affected in transaction {}", id, transactionId);
@@ -386,7 +417,7 @@ public final class Coordinator extends Actor {
             decide(message.transactionId, decision);
 
             // Terminate transaction
-            terminateTransaction(message.transactionId);
+            terminateTransaction(message.transactionId, true);
         }
     }
 
@@ -443,7 +474,8 @@ public final class Coordinator extends Actor {
                     }
 
                     // Terminate transaction
-                    terminateTransaction(transactionId);
+                    // FIXME Crash on every transaction can be cumbersome
+                    terminateTransaction(transactionId, true);
                 });
     }
 
@@ -470,7 +502,7 @@ public final class Coordinator extends Actor {
             LOGGER.debug("Coordinator {} in timeout unilaterally ABORT for transaction {}", id, message.transactionId);
 
             //Terminate transaction
-
+            terminateTransaction(message.transactionId, true);
         } else {
             final Decision decision = finalDecisions.get(message.transactionId);
             LOGGER.info("Coordinator {} in timeout has already decided to {} for transaction {}", id, decision, message.transactionId);

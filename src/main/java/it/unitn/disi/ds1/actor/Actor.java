@@ -68,24 +68,51 @@ public abstract class Actor extends AbstractActor {
     }
 
     /**
+     * Multicast crash state.
+     */
+    public enum Crash {
+        /**
+         * NO crash.
+         */
+        NONE,
+        /**
+         * Crash after sending first message.
+         */
+        AFTER_FIRST_MESSAGE,
+        /**
+         * Crash after all message(s) have been sent.
+         */
+        AFTER_ALL_MESSAGES
+    }
+
+    /**
      * Send in multicast to the recipients the message.
-     * If crash is true, simulate a crash during the multicast operation.
+     * Use `crash` to simulate a crash during the operation.
      *
      * @param recipients {@link Actor} recipients
      * @param message    Message to send
-     * @param crash      Crash during multicast
+     * @param crash      Crash state
      */
-    protected void multicast(List<ActorMetadata> recipients, Message message, boolean crash) {
+    protected void multicast(Set<ActorMetadata> recipients, Message message, Crash crash) {
         if (recipients == null) return;
+        if (crash != Crash.NONE && !Config.CRASH_ENABLED)
+            throw new IllegalStateException(String.format("Actor %d multicast tried to crash when crash is not enabled", id));
 
+        LOGGER.debug("Actor {} send to multicast involving {} recipient(s): {}", id, recipients.size(), message);
         for (ActorMetadata recipient : recipients) {
-            LOGGER.debug("Actor {} send to multicast involving {} recipient(s): {}", id, recipients.size(), message);
+            LOGGER.debug("Actor {} send to recipient {}: {}", id, recipient.id, message);
             recipient.ref.tell(message, getSelf());
 
-            if (crash) {
+            if (crash == Crash.AFTER_FIRST_MESSAGE) {
+                LOGGER.debug("Actor {} crash after first message sent to recipient {}: {}", id, recipient.id, message);
                 crash();
                 break;
             }
+        }
+
+        if (crash == Crash.AFTER_ALL_MESSAGES) {
+            LOGGER.debug("Actor {} crash after all message(s) have been sent to {} recipient(s)", id, recipients.size());
+            crash();
         }
     }
 
@@ -95,8 +122,8 @@ public abstract class Actor extends AbstractActor {
      * @param recipients {@link Actor} recipients
      * @param message    Message to send
      */
-    protected void multicast(List<ActorMetadata> recipients, Message message) {
-        multicast(recipients, message, false);
+    protected void multicast(Set<ActorMetadata> recipients, Message message) {
+        multicast(recipients, message, Crash.NONE);
     }
 
     /**
@@ -161,10 +188,8 @@ public abstract class Actor extends AbstractActor {
 
     /**
      * Simulate Actor crash.
-     *
-     * @param recoveryTimeout Timeout in ms before Actor recovery
      */
-    protected void crash(int recoveryTimeout) {
+    protected void crash() {
         // Become crashed
         getContext().become(crashed());
         LOGGER.info("Actor {} is crashed", id);
@@ -174,19 +199,12 @@ public abstract class Actor extends AbstractActor {
         transactionsTimeout.clear();
 
         getContext().system().scheduler().scheduleOnce(
-                Duration.create(recoveryTimeout, TimeUnit.MILLISECONDS),
+                Duration.create(Config.TWOPC_RECOVERY_TIMEOUT_MS, TimeUnit.MILLISECONDS),
                 getSelf(),
                 new TwoPcRecoveryMessage(),
                 getContext().system().dispatcher(),
                 getSelf()
         );
-    }
-
-    /**
-     * Simulate Actor crash.
-     */
-    protected void crash() {
-        crash(Config.TWOPC_RECOVERY_TIMEOUT_MS);
     }
 
     /**
