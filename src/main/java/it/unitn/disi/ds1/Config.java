@@ -17,34 +17,34 @@ public final class Config implements Serializable {
     /**
      * Number of {@link DataStore Data Store(s)}.
      */
-    public final static int N_DATA_STORES = 4;
+    public static final int N_DATA_STORES = 4;
 
     /**
      * Number of {@link Coordinator Coordinator(s)}.
      */
-    public final static int N_COORDINATORS = 8;
+    public static final int N_COORDINATORS = 8;
 
     /**
      * Number of {@link Client Client(s)}.
      */
-    public final static int N_CLIENTS = 64;
+    public static final int N_CLIENTS = 64;
 
     /**
      * Maximum item key index value.
      */
-    public final static int MAX_ITEM_KEY = (N_DATA_STORES * 10) - 1;
+    public static final int MAX_ITEM_KEY = (N_DATA_STORES * 10) - 1;
 
     // --- Timeout ---
 
     /**
      * Minimum sleep timeout (ms).
      */
-    public static final int MIN_SLEEP_TIMEOUT_MS = 16;
+    public static final int MIN_SLEEP_TIMEOUT_MS = 8;
 
     /**
      * Maximum sleep timeout (ms).
      */
-    public static final int MAX_SLEEP_TIMEOUT_MS = 512;
+    public static final int MAX_SLEEP_TIMEOUT_MS = 128;
 
     /**
      * 2PC {@link Coordinator} vote to {@link DataStore DataStore(s)} timeout (ms).
