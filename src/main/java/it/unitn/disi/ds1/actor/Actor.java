@@ -118,11 +118,33 @@ public abstract class Actor extends AbstractActor {
 
     /**
      * Send in multicast to the recipients the message.
+     * Use `crash` to simulate a crash during the operation.
+     *
+     * @param recipients {@link Actor} recipients
+     * @param message    Message to send
+     * @param crash      Crash state
+     */
+    protected void multicast(List<ActorMetadata> recipients, Message message, Crash crash) {
+        multicast(new HashSet<>(recipients), message, crash);
+    }
+
+    /**
+     * Send in multicast to the recipients the message.
      *
      * @param recipients {@link Actor} recipients
      * @param message    Message to send
      */
     protected void multicast(Set<ActorMetadata> recipients, Message message) {
+        multicast(recipients, message, Crash.NONE);
+    }
+
+    /**
+     * Send in multicast to the recipients the message.
+     *
+     * @param recipients {@link Actor} recipients
+     * @param message    Message to send
+     */
+    protected void multicast(List<ActorMetadata> recipients, Message message) {
         multicast(recipients, message, Crash.NONE);
     }
 

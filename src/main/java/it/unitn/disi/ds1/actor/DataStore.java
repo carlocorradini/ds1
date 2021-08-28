@@ -243,6 +243,9 @@ public final class DataStore extends Actor {
     private void onTxnReadCoordinatorMessage(TxnReadCoordinatorMessage message) {
         LOGGER.debug("DataStore {} received from Coordinator {} TxnReadCoordinatorMessage: {}", id, message.senderId, message);
 
+        // Simulate delay
+        sleep();
+
         // Obtain private workspace, otherwise create
         final Map<Integer, Item> workspace = workspaces.computeIfAbsent(message.transactionId, k -> new HashMap<>());
 
@@ -255,9 +258,6 @@ public final class DataStore extends Actor {
             LOGGER.trace("DataStore {} on READ added Item {} involving transaction {} to workspace: {}", id, message.key, message.transactionId, item);
             return item;
         });
-
-        // Simulate delay
-        sleep();
 
         // Respond to Coordinator with Item
         final TxnReadResultCoordinatorMessage outMessage = new TxnReadResultCoordinatorMessage(id, message.transactionId, message.key, itemInWorkspace.getValue());
@@ -276,14 +276,14 @@ public final class DataStore extends Actor {
     private void onTxnWriteCoordinatorMessage(TxnWriteCoordinatorMessage message) {
         LOGGER.debug("DataStore {} received from Coordinator {} TxnWriteCoordinatorMessage: {}", id, message.senderId, message);
 
+        // Simulate delay
+        sleep();
+
         // Obtain private workspace, otherwise create
         final Map<Integer, Item> workspace = workspaces.computeIfAbsent(message.transactionId, k -> new HashMap<>());
 
         // Obtain Item in storage
         final Item itemInStorage = storage.get(message.key);
-
-        // Simulate delay
-        sleep();
 
         // Compute Item in workspace
         final Item itemInWorkspace = workspace.compute(message.key, (k, oldItemInWorkspace) -> {
@@ -303,32 +303,40 @@ public final class DataStore extends Actor {
      */
     private void onTwoPcVoteMessage(TwoPcVoteMessage message) {
         LOGGER.debug("DataStore {} received from Coordinator {} TwoPcVoteMessage: {}", id, message.senderId, message);
+
         // Simulate delay
         sleep();
 
-        // Check client decision
-        switch (message.decision) {
-            case COMMIT: {
-                // Check if transaction can commit
-                final Decision decision = Decision.valueOf(canCommit(message.transactionId));
-                LOGGER.debug("DataStore {} received COMMIT decision from Coordinator {} involving transaction {} and decision is {}", id, message.senderId, message.transactionId, decision);
+        // Check decision
+        if (message.decision != Decision.COMMIT)
+            throw new IllegalStateException(String.format("DataStore %d received %s decision from Coordinator %d involving transaction %s", id, message.decision, message.senderId, message.transactionId));
 
-                // Store vote
-                transactionVotes.put(message.transactionId, decision);
+        // Compute vote if not already voted
+        final Decision vote = transactionVotes.computeIfAbsent(message.transactionId, k -> {
+            final Decision v = Decision.valueOf(canCommit(message.transactionId));
+            LOGGER.debug("DataStore {} received COMMIT decision from Coordinator {} involving transaction {} and vote is {}", id, message.senderId, message.transactionId, v);
+            return v;
+        });
 
-                // Send response to Coordinator
-                final TwoPcVoteResultMessage outMessage = new TwoPcVoteResultMessage(id, message.transactionId, decision);
-                getSender().tell(outMessage, getSender());
-                LOGGER.debug("DataStore {} send to Coordinator {} TwoPcVoteResultMessage: {}", id, message.senderId, outMessage);
+        // Crash before sending vote response to Coordinator
+        if (Config.CRASH_DATA_STORE_VOTE) {
+            LOGGER.debug("DataStore {} crash before sending vote {} response to Coordinator {}", id, vote, message.senderId);
+            crash();
+            return;
+        }
 
-                // Schedule timeout
-                timeout(message.transactionId, Config.TWOPC_DECISION_TIMEOUT_MS);
-                break;
-            }
-            case ABORT:
-                throw new IllegalStateException(String.format("DataStore %d received ABORT decision from Coordinator %d involving transaction %s", id, message.senderId, message.transactionId));
-            default:
-                throw new IllegalStateException(String.format("DataStore %d received UNKNOWN decision from Coordinator %d involving transaction %s", id, message.senderId, message.transactionId));
+        // Send response to Coordinator
+        final TwoPcVoteResultMessage outMessage = new TwoPcVoteResultMessage(id, message.transactionId, vote);
+        getSender().tell(outMessage, getSender());
+        LOGGER.debug("DataStore {} send to Coordinator {} TwoPcVoteResultMessage: {}", id, message.senderId, outMessage);
+
+        // Schedule timeout
+        timeout(message.transactionId, Config.TWOPC_DECISION_TIMEOUT_MS);
+
+        // Crash before receiving decision from Coordinator
+        if (Config.CRASH_DATA_STORE_DECISION) {
+            LOGGER.debug("DataStore {} crash before receiving decision from Coordinator {}", id, message.senderId);
+            crash();
         }
     }
 
@@ -339,6 +347,7 @@ public final class DataStore extends Actor {
      */
     private void onTwoPcDecisionMessage(TwoPcDecisionMessage message) {
         LOGGER.debug("DataStore {} received from Coordinator {} to {} TwoPcDecisionMessage: {}", id, message.senderId, message.decision, message);
+
         // Simulate delay
         sleep();
 
@@ -370,6 +379,7 @@ public final class DataStore extends Actor {
      */
     private void onTwoPcDecisionRequestMessage(TwoPcDecisionRequestMessage message) {
         LOGGER.debug("DataStore {} received from Actor {} TwoPcDecisionRequest: {}", id, message.senderId, message);
+
         // Simulate delay
         sleep();
 
@@ -391,6 +401,7 @@ public final class DataStore extends Actor {
     @Override
     protected void onTwoPcRecoveryMessage(TwoPcRecoveryMessage message) {
         LOGGER.debug("Data store {} received TwoPcRecoveryMessage", id);
+
         // Simulate delay
         sleep();
 
@@ -439,6 +450,7 @@ public final class DataStore extends Actor {
     @Override
     protected void onTwoPcTimeoutMessage(TwoPcTimeoutMessage message) {
         LOGGER.debug("DataStore {} received TwoPcTimeoutMessage: {}", id, message);
+
         // Simulate delay
         sleep();
 
@@ -448,22 +460,20 @@ public final class DataStore extends Actor {
         // Check if not voted
         if (!transactionVotes.containsKey(message.transactionId)) {
             // Not voted
-            final Decision decision = Decision.ABORT;
-            LOGGER.info("DataStore {} in timeout safely decide to {} because it has not voted yet", id, decision);
+            LOGGER.info("DataStore {} in timeout safely decide to ABORT because it has not voted yet", id);
 
             // Store the vote
-            transactionVotes.put(message.transactionId, decision);
+            transactionVotes.put(message.transactionId, Decision.ABORT);
 
             // Timeout before vote
-            final TwoPcDecisionMessage outMessage = new TwoPcDecisionMessage(Message.NO_SENDER_ID, message.transactionId, decision);
+            final TwoPcDecisionMessage outMessage = new TwoPcDecisionMessage(Message.NO_SENDER_ID, message.transactionId, Decision.ABORT);
             getSelf().tell(outMessage, getSelf());
-            LOGGER.debug("DataStore {} in timeout unilaterally ABORT for transaction {}", id, message.transactionId);
+            LOGGER.debug("DataStore {} in timeout ABORT for transaction {}", id, message.transactionId);
         }
 
-        // Check if not decided and voted YES
+        // Check if not decided and voted COMMIT
         if (!hasDecided(message.transactionId) && transactionVotes.get(message.transactionId) == Decision.COMMIT) {
             LOGGER.info("DataStore {} in timeout voted COMMIT for transaction {} and ask around to know the final decision", id, message.transactionId);
-
             final TwoPcDecisionRequestMessage outMessage = new TwoPcDecisionRequestMessage(id, message.transactionId);
             multicast(dataStores, outMessage);
         } else {

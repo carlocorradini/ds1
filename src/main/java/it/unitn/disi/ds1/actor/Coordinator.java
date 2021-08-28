@@ -219,14 +219,14 @@ public final class Coordinator extends Actor {
     private void onTxnBeginMessage(TxnBeginMessage message) {
         LOGGER.debug("Coordinator {} received from Client {} TxnBeginMessage: {}", id, message.senderId, message);
 
+        // Simulate delay
+        sleep();
+
         // Generate a transaction id and store all relevant data
         final UUID transactionId = UUID.randomUUID();
         clientIdToTransactionId.put(message.senderId, transactionId);
         transactionIdToClient.put(transactionId, ActorMetadata.of(message.senderId, getSender()));
         dataStoresAffectedInTransaction.put(transactionId, new HashSet<>());
-
-        // Simulate delay
-        sleep();
 
         // Inform Client that the transaction has been accepted
         final TxnBeginResultMessage outMessage = new TxnBeginResultMessage(id);
@@ -242,6 +242,9 @@ public final class Coordinator extends Actor {
     private void onTxnReadMessage(TxnReadMessage message) {
         LOGGER.debug("Coordinator {} received from Client {} TxnReadMessage: {}", id, message.senderId, message);
 
+        // Simulate delay
+        sleep();
+
         // Obtain transaction id
         final UUID transactionId = clientIdToTransactionId.get(message.senderId);
 
@@ -254,9 +257,6 @@ public final class Coordinator extends Actor {
         } else {
             LOGGER.trace("Coordinator {} DataStore {} already present in affected DataStore(s) for transaction {}", id, dataStore.id, transactionId);
         }
-
-        // Simulate delay
-        sleep();
 
         // Send to DataStore Item read message
         final TxnReadCoordinatorMessage outMessage = new TxnReadCoordinatorMessage(id, transactionId, message.key);
@@ -272,11 +272,11 @@ public final class Coordinator extends Actor {
     private void onTxnReadResultCoordinatorMessage(TxnReadResultCoordinatorMessage message) {
         LOGGER.debug("Coordinator {} received from DataStore {} TxnReadResultCoordinatorMessage: {}", id, message.senderId, message);
 
-        // Obtain Client
-        final ActorMetadata client = transactionIdToClient.get(message.transactionId);
-
         // Simulate delay
         sleep();
+
+        // Obtain Client
+        final ActorMetadata client = transactionIdToClient.get(message.transactionId);
 
         // Send to Client Item read reply message
         final TxnReadResultMessage outMessage = new TxnReadResultMessage(id, message.key, message.value);
@@ -292,6 +292,9 @@ public final class Coordinator extends Actor {
     private void onTxnWriteMessage(TxnWriteMessage message) {
         LOGGER.debug("Coordinator {} received from Client {} TxnWriteMessage: {}", id, message.senderId, message);
 
+        // Simulate delay
+        sleep();
+
         // Obtain transaction id
         final UUID transactionId = clientIdToTransactionId.get(message.senderId);
 
@@ -304,9 +307,6 @@ public final class Coordinator extends Actor {
         } else {
             LOGGER.trace("Coordinator {} DataStore {} already present in affected DataStore(s) for transaction {}", id, dataStore.id, transactionId);
         }
-
-        // Simulate delay
-        sleep();
 
         // Send to DataStore Item write message
         final TxnWriteCoordinatorMessage outMessage = new TxnWriteCoordinatorMessage(id, transactionId, message.key, message.value);
@@ -428,6 +428,7 @@ public final class Coordinator extends Actor {
      */
     private void onTwoPcDecisionRequestMessage(TwoPcDecisionRequestMessage message) {
         LOGGER.debug("Coordinator {} received from DataStore {} TwoPcDecisionRequest: {}", id, message.senderId, message);
+
         // Simulate delay
         sleep();
 
@@ -449,6 +450,7 @@ public final class Coordinator extends Actor {
     @Override
     protected void onTwoPcRecoveryMessage(TwoPcRecoveryMessage message) {
         LOGGER.debug("Coordinator {} received TwoPcRecoveryMessage", id);
+
         // Simulate delay
         sleep();
 
@@ -488,6 +490,7 @@ public final class Coordinator extends Actor {
     @Override
     protected void onTwoPcTimeoutMessage(TwoPcTimeoutMessage message) {
         LOGGER.debug("Coordinator {} received TwoPcTimeoutMessage: {}", id, message);
+
         // Simulate delay
         sleep();
 
