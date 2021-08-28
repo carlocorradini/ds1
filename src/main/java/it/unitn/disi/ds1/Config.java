@@ -64,6 +64,11 @@ public final class Config implements Serializable {
     /* --- Crash --- */
 
     /**
+     * Crash {@link Coordinator} during recovery phase.
+     */
+    public static final boolean CRASH_COORDINATOR_ON_RECOVERY = false;
+
+    /**
      * Crash {@link Coordinator} after sending first {@link it.unitn.disi.ds1.message.twopc.TwoPcVoteMessage 2PC vote message}.
      */
     public static final boolean CRASH_COORDINATOR_VOTE_FIRST = false;

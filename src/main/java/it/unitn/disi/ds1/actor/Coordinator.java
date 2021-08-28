@@ -476,8 +476,7 @@ public final class Coordinator extends Actor {
                     }
 
                     // Terminate transaction
-                    // FIXME Crash on every transaction can be cumbersome
-                    terminateTransaction(transactionId, true);
+                    terminateTransaction(transactionId, Config.CRASH_COORDINATOR_ON_RECOVERY);
                 });
     }
 
