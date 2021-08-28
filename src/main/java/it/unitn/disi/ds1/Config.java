@@ -107,6 +107,4 @@ public final class Config implements Serializable {
             || CRASH_COORDINATOR_DECISION_ALL
             || CRASH_DATA_STORE_VOTE
             || CRASH_DATA_STORE_DECISION;
-
-
 }
