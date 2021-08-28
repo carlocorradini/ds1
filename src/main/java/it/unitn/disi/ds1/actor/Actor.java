@@ -206,19 +206,6 @@ public abstract class Actor extends AbstractActor {
     }
 
     /**
-     * Simulate Actor timeout.
-     *
-     * @param transactionId Transaction id during timeout
-     */
-    protected void timeout(UUID transactionId) {
-        timeout(transactionId,
-                random
-                        .ints(Config.MIN_SLEEP_TIMEOUT_MS, Config.MAX_SLEEP_TIMEOUT_MS + 1)
-                        .findFirst()
-                        .orElse(Math.abs(Config.MAX_SLEEP_TIMEOUT_MS - Config.MIN_SLEEP_TIMEOUT_MS)));
-    }
-
-    /**
      * Remove (and cancel), if present, the {@link Cancellable timeout} of the {@link UUID transaction}.
      *
      * @param transactionId Transaction id during timeout

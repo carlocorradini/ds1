@@ -1,6 +1,7 @@
 package it.unitn.disi.ds1.actor;
 
 import akka.actor.Props;
+import it.unitn.disi.ds1.Config;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.etc.Decision;
@@ -203,6 +204,9 @@ public final class Coordinator extends Actor {
         transactionIdToClient.put(transactionId, ActorMetadata.of(message.senderId, getSender()));
         dataStoresAffectedInTransaction.put(transactionId, new HashSet<>());
 
+        // Simulate delay
+        sleep();
+
         // Inform Client that the transaction has been accepted
         final TxnBeginResultMessage outMessage = new TxnBeginResultMessage(id);
         getSender().tell(outMessage, getSelf());
@@ -230,6 +234,9 @@ public final class Coordinator extends Actor {
             LOGGER.trace("Coordinator {} DataStore {} already present in affected DataStore(s) for transaction {}", id, dataStore.id, transactionId);
         }
 
+        // Simulate delay
+        sleep();
+
         // Send to DataStore Item read message
         final TxnReadCoordinatorMessage outMessage = new TxnReadCoordinatorMessage(id, transactionId, message.key);
         dataStore.ref.tell(outMessage, getSelf());
@@ -246,6 +253,9 @@ public final class Coordinator extends Actor {
 
         // Obtain Client
         final ActorMetadata client = transactionIdToClient.get(message.transactionId);
+
+        // Simulate delay
+        sleep();
 
         // Send to Client Item read reply message
         final TxnReadResultMessage outMessage = new TxnReadResultMessage(id, message.key, message.value);
@@ -274,6 +284,9 @@ public final class Coordinator extends Actor {
             LOGGER.trace("Coordinator {} DataStore {} already present in affected DataStore(s) for transaction {}", id, dataStore.id, transactionId);
         }
 
+        // Simulate delay
+        sleep();
+
         // Send to DataStore Item write message
         final TxnWriteCoordinatorMessage outMessage = new TxnWriteCoordinatorMessage(id, transactionId, message.key, message.value);
         dataStore.ref.tell(outMessage, getSelf());
@@ -287,6 +300,9 @@ public final class Coordinator extends Actor {
      */
     private void onTxnEndMessage(TxnEndMessage message) {
         LOGGER.debug("Coordinator {} received from Client {} TxnEndMessage {}", id, message.senderId, message);
+
+        // Simulate delay
+        sleep();
 
         // Obtain transaction id
         final UUID transactionId = clientIdToTransactionId.get(message.senderId);
@@ -307,8 +323,9 @@ public final class Coordinator extends Actor {
                         LOGGER.trace("Coordinator {} send to affected DataStore {} if can COMMIT transaction {} TwoPcVoteMessage: {}", id, dataStore.id, transactionId, outMessage);
                     });
                     LOGGER.debug("Coordinator {} send to {} affected DataStore(s) if can COMMIT transaction {} TwoPcVoteMessage: {}", id, affectedDataStores.size(), transactionId, outMessage);
+
                     // Schedule timeout
-                    timeout(transactionId);
+                    timeout(transactionId, Config.TWOPC_VOTE_TIMEOUT_MS);
                 } else {
                     // No DataStore(s) affected
                     LOGGER.warn("Coordinator {} no DataStore(s) are affected in transaction {}", id, transactionId);
@@ -333,6 +350,9 @@ public final class Coordinator extends Actor {
      * @param message Received message
      */
     private void onTwoPcVoteResultMessage(TwoPcVoteResultMessage message) {
+        // Simulate delay
+        sleep();
+
         // Check if already decided
         if (hasDecided(message.transactionId)) {
             LOGGER.warn("Coordinator {} received from DataStore {} TwoPcVoteResultMessage when has already decided to {} for transaction {}", id, message.senderId, finalDecisions.get(message.transactionId), message.transactionId);
@@ -377,6 +397,8 @@ public final class Coordinator extends Actor {
      */
     private void onTwoPcDecisionRequestMessage(TwoPcDecisionRequestMessage message) {
         LOGGER.debug("Coordinator {} received from DataStore {} TwoPcDecisionRequest: {}", id, message.senderId, message);
+        // Simulate delay
+        sleep();
 
         // Check if it knows the final decision
         if (hasDecided(message.transactionId)) {
@@ -396,6 +418,8 @@ public final class Coordinator extends Actor {
     @Override
     protected void onTwoPcRecoveryMessage(TwoPcRecoveryMessage message) {
         LOGGER.debug("Coordinator {} received TwoPcRecoveryMessage", id);
+        // Simulate delay
+        sleep();
 
         // Become normal
         getContext().become(createReceive());
@@ -432,6 +456,9 @@ public final class Coordinator extends Actor {
     @Override
     protected void onTwoPcTimeoutMessage(TwoPcTimeoutMessage message) {
         LOGGER.debug("Coordinator {} received TwoPcTimeoutMessage: {}", id, message);
+        // Simulate delay
+        sleep();
+
         // Clear the timeout for transaction
         unTimeout(message.transactionId);
 

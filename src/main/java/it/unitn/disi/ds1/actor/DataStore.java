@@ -1,6 +1,7 @@
 package it.unitn.disi.ds1.actor;
 
 import akka.actor.Props;
+import it.unitn.disi.ds1.Config;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.message.Message;
@@ -255,6 +256,9 @@ public final class DataStore extends Actor {
             return item;
         });
 
+        // Simulate delay
+        sleep();
+
         // Respond to Coordinator with Item
         final TxnReadResultCoordinatorMessage outMessage = new TxnReadResultCoordinatorMessage(id, message.transactionId, message.key, itemInWorkspace.getValue());
         getSender().tell(outMessage, getSelf());
@@ -278,6 +282,9 @@ public final class DataStore extends Actor {
         // Obtain Item in storage
         final Item itemInStorage = storage.get(message.key);
 
+        // Simulate delay
+        sleep();
+
         // Compute Item in workspace
         final Item itemInWorkspace = workspace.compute(message.key, (k, oldItemInWorkspace) -> {
             final Item item = oldItemInWorkspace == null ? new Item(message.value, itemInStorage.getVersion()) : oldItemInWorkspace;
@@ -296,6 +303,8 @@ public final class DataStore extends Actor {
      */
     private void onTwoPcVoteMessage(TwoPcVoteMessage message) {
         LOGGER.debug("DataStore {} received from Coordinator {} TwoPcVoteMessage: {}", id, message.senderId, message);
+        // Simulate delay
+        sleep();
 
         // Check client decision
         switch (message.decision) {
@@ -313,7 +322,7 @@ public final class DataStore extends Actor {
                 LOGGER.debug("DataStore {} send to Coordinator {} TwoPcVoteResultMessage: {}", id, message.senderId, outMessage);
 
                 // Schedule timeout
-                timeout(message.transactionId);
+                timeout(message.transactionId, Config.TWOPC_DECISION_TIMEOUT_MS);
                 break;
             }
             case ABORT:
@@ -330,6 +339,9 @@ public final class DataStore extends Actor {
      */
     private void onTwoPcDecisionMessage(TwoPcDecisionMessage message) {
         LOGGER.debug("DataStore {} received from Coordinator {} to {} TwoPcDecisionMessage: {}", id, message.senderId, message.decision, message);
+        // Simulate delay
+        sleep();
+
         // Clear the timeout for transaction
         unTimeout(message.transactionId);
 
@@ -358,6 +370,8 @@ public final class DataStore extends Actor {
      */
     private void onTwoPcDecisionRequestMessage(TwoPcDecisionRequestMessage message) {
         LOGGER.debug("DataStore {} received from Actor {} TwoPcDecisionRequest: {}", id, message.senderId, message);
+        // Simulate delay
+        sleep();
 
         // Check if it knows the final decision
         if (hasDecided(message.transactionId)) {
@@ -377,6 +391,8 @@ public final class DataStore extends Actor {
     @Override
     protected void onTwoPcRecoveryMessage(TwoPcRecoveryMessage message) {
         LOGGER.debug("Data store {} received TwoPcRecoveryMessage", id);
+        // Simulate delay
+        sleep();
 
         // Become normal
         getContext().become(createReceive());
@@ -405,7 +421,7 @@ public final class DataStore extends Actor {
                         // Ask coordinator
                         coordinator.ref.tell(outMessage, getSelf());
                         // Schedule timeout
-                        timeout(transactionId);
+                        timeout(transactionId, Config.TWOPC_DECISION_TIMEOUT_MS);
                         LOGGER.debug("DataStore {} is recovering and ask Coordinator {} for decision involving transaction {}: {}", id, coordinator.id, transactionId, outMessage);
                     } else {
                         // Already know the final decision
@@ -423,6 +439,9 @@ public final class DataStore extends Actor {
     @Override
     protected void onTwoPcTimeoutMessage(TwoPcTimeoutMessage message) {
         LOGGER.debug("DataStore {} received TwoPcTimeoutMessage: {}", id, message);
+        // Simulate delay
+        sleep();
+
         // Clear the timeout for transaction
         unTimeout(message.transactionId);
 
