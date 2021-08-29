@@ -37,7 +37,7 @@ public final class Config implements Serializable {
      * Maximum number of run(s) to process.
      * Used only when MODE is AUTOMATIC.
      */
-    public static final int N_RUNS = 32;
+    public static final int N_RUNS = 16;
 
     // --- Actor(s) ---
 

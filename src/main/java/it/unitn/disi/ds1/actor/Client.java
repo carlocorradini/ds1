@@ -397,11 +397,11 @@ public final class Client extends AbstractActor {
         // Check current run
         if (run < Config.N_RUNS) {
             // Begin a new transaction
-            LOGGER.debug("Client {} begin a new transaction in run {}/{}", id, run, Config.N_RUNS);
+            LOGGER.info("Client {} begin a new transaction in run {}/{}", id, run, Config.N_RUNS);
             beginTxn();
         } else {
             // Run ended
-            LOGGER.debug("Client {} ended all available {} run(s)", id, Config.N_RUNS);
+            LOGGER.info("Client {} ended all available {} run(s)", id, Config.N_RUNS);
         }
     }
 

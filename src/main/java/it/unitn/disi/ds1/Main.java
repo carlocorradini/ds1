@@ -113,6 +113,9 @@ public final class Main {
      * @param run          Run counter
      */
     public static void askTxnQuestion(List<ActorMetadata> coordinators, int run) {
+        // Flush STDOUT
+        System.out.flush();
+
         // Wait ...
         System.out.println("--- AFTER ALL TRANSACTION(S) PRESS `ENTER` TO CONTINUE...");
         SCANNER.nextLine();
