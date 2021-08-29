@@ -6,6 +6,7 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import akka.actor.*;
+import it.unitn.disi.ds1.Config;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 import it.unitn.disi.ds1.etc.Item;
 import it.unitn.disi.ds1.message.txn.read.TxnReadMessage;
@@ -128,6 +129,11 @@ public final class Client extends AbstractActor {
      */
     private final Random random;
 
+    /**
+     * Run counter.
+     */
+    private int run;
+
     // --- Constructors ---
 
     /**
@@ -140,6 +146,7 @@ public final class Client extends AbstractActor {
         this.coordinators = new ArrayList<>();
         this.txnAttempted = 0;
         this.txnCommitted = 0;
+        this.run = 0;
         // Initialize random with SecureRandom
         Random r;
         try {
@@ -172,7 +179,7 @@ public final class Client extends AbstractActor {
                 .match(TxnBeginTimeoutMessage.class, this::onTxnBeginTimeoutMessage)
                 .match(TxnReadResultMessage.class, this::onTxnReadResultMessage)
                 .match(TxnEndResultMessage.class, this::onTxnEndResultMsg)
-                .match(TxnStopMessage.class,  this::onTxnStopMessage)
+                .match(TxnStopMessage.class, this::onTxnStopMessage)
                 .build();
     }
 
@@ -367,6 +374,9 @@ public final class Client extends AbstractActor {
     private void onTxnEndResultMsg(TxnEndResultMessage message) {
         LOGGER.debug("Client {} received TxnEndResultMessage with decision {}: {}", id, message.decision, message);
 
+        // Increment run counter
+        run += 1;
+
         switch (message.decision) {
             case COMMIT: {
                 txnCommitted++;
@@ -381,6 +391,18 @@ public final class Client extends AbstractActor {
         }
 
         LOGGER.info("End TXN by Client {}", id);
+
+        // If not in AUTOMATIC mode stop
+        if (Config.MODE != Config.Mode.AUTOMATIC) return;
+        // Check current run
+        if (run < Config.N_RUNS) {
+            // Begin a new transaction
+            LOGGER.debug("Client {} begin a new transaction in run {}/{}", id, run, Config.N_RUNS);
+            beginTxn();
+        } else {
+            // Run ended
+            LOGGER.debug("Client {} ended all available {} run(s)", id, Config.N_RUNS);
+        }
     }
 
     /**

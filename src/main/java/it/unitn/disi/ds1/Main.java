@@ -26,6 +26,16 @@ public final class Main {
      */
     private static final Logger LOGGER = LogManager.getLogger(Main.class);
 
+    /**
+     * Random instance.
+     */
+    private static final Random RANDOM = new Random();
+
+    /**
+     * Scanner instance.
+     */
+    private static final Scanner SCANNER = new Scanner(System.in);
+
     public static void main(String[] args) {
         // --- Variables ---
         final ActorSystem system = ActorSystem.create("banky");
@@ -51,41 +61,69 @@ public final class Main {
         // Coordinators
         final CoordinatorWelcomeMessage coordinatorWelcomeMessage = new CoordinatorWelcomeMessage(dataStores);
         coordinators.forEach(coordinator -> coordinator.ref.tell(coordinatorWelcomeMessage, ActorRef.noSender()));
-        // Clients
-        final ClientWelcomeMessage clientWelcomeMessage = new ClientWelcomeMessage(coordinators, Config.MAX_ITEM_KEY);
-        clients.forEach(client -> client.ref.tell(clientWelcomeMessage, ActorRef.noSender()));
 
         // --- Run ---
-        final Scanner scanner = new Scanner(System.in);
-        final Random random = new Random();
-        int snapshotId = 0;
+        int run = 0;
         boolean continueTxn;
 
+        // Lifecycle
         do {
-            // Wait ...
-            System.out.println("--- AFTER ALL TRANSACTION(S) PRESS `ENTER` TO CONTINUE...");
-            scanner.nextLine();
+            // Welcome Clients
+            final ClientWelcomeMessage clientWelcomeMessage = new ClientWelcomeMessage(coordinators, Config.MAX_ITEM_KEY);
+            clients.forEach(client -> client.ref.tell(clientWelcomeMessage, ActorRef.noSender()));
 
-            // Verify storage ?
-            System.out.println("--- VERIFY STORAGE [Y|N]? ");
-            final boolean verifyStorage = scanner.nextLine().matches("(?i)^(?:y(?:es)?|1)$");
-            if (verifyStorage) {
-                coordinators
-                        .get(random.nextInt(coordinators.size()))
-                        .ref.tell(new SnapshotMessage(Message.NO_SENDER_ID, snapshotId++), ActorRef.noSender());
+            // Mode selector
+            switch (Config.MODE) {
+                case INTERACTIVE: {
+                    // Ask transaction question always
+                    askTxnQuestion(coordinators, run);
+
+                    // Continue ?
+                    System.out.println("--- CONTINUE [Y|N]? ");
+                    continueTxn = SCANNER.nextLine().matches("(?i)^(?:y(?:es)?|1)$");
+                    break;
+                }
+                case AUTOMATIC: {
+                    // Stop
+                    continueTxn = false;
+                    // Ask transaction question before terminating
+                    askTxnQuestion(coordinators, 0);
+                    break;
+                }
+                default: {
+                    continueTxn = false;
+                    break;
+                }
             }
 
-            // Continue ?
-            System.out.println("--- CONTINUE [Y|N]? ");
-            continueTxn = scanner.nextLine().toUpperCase().matches("(?i)^(?:y(?:es)?|1)$");
-            if (continueTxn) {
-                clients.forEach(client -> client.ref.tell(clientWelcomeMessage, ActorRef.noSender()));
-                System.out.flush();
-            }
+            // Increment run
+            run += 1;
         } while (continueTxn);
+
 
         // Terminate
         LOGGER.info("Terminating system...");
         system.terminate();
+    }
+
+    /**
+     * Utility to ask simple transaction question to the user.
+     *
+     * @param coordinators List of available {@link Coordinator Coordinator(s)} {@link ActorMetadata}
+     * @param run          Run counter
+     */
+    public static void askTxnQuestion(List<ActorMetadata> coordinators, int run) {
+        // Wait ...
+        System.out.println("--- AFTER ALL TRANSACTION(S) PRESS `ENTER` TO CONTINUE...");
+        SCANNER.nextLine();
+
+        // Verify storage ?
+        System.out.println("--- VERIFY STORAGE [Y|N]? ");
+        final boolean verifyStorage = SCANNER.nextLine().matches("(?i)^(?:y(?:es)?|1)$");
+        if (verifyStorage) {
+            coordinators
+                    .get(RANDOM.nextInt(coordinators.size()))
+                    .ref.tell(new SnapshotMessage(Message.NO_SENDER_ID, run), ActorRef.noSender());
+        }
     }
 }

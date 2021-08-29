@@ -12,6 +12,33 @@ import java.io.Serializable;
 public final class Config implements Serializable {
     private static final long serialVersionUID = -4468675888064285514L;
 
+    // --- UI/UX ---
+
+    /**
+     * Running mode.
+     */
+    public enum Mode {
+        /**
+         * Interactive mode.
+         */
+        INTERACTIVE,
+        /**
+         * Automatic mode.
+         */
+        AUTOMATIC
+    }
+
+    /**
+     * Running mode.
+     */
+    public static final Mode MODE = Mode.AUTOMATIC;
+
+    /**
+     * Maximum number of run(s) to process.
+     * Used only when MODE is AUTOMATIC.
+     */
+    public static final int N_RUNS = 32;
+
     // --- Actor(s) ---
 
     /**
@@ -27,7 +54,7 @@ public final class Config implements Serializable {
     /**
      * Number of {@link Client Client(s)}.
      */
-    public static final int N_CLIENTS = 64;
+    public static final int N_CLIENTS = 16;
 
     /**
      * Maximum item key index value.
