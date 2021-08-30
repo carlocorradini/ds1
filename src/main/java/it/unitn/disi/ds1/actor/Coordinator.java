@@ -160,7 +160,7 @@ public final class Coordinator extends Actor {
         }
 
         // Stop execution if crash enabled
-        if (crash) return;
+        if (crash && Config.CRASH_ENABLED) return;
 
         // Communicate commit decision to Client
         final ActorMetadata client = transactionIdToClient.get(transactionId);
