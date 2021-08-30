@@ -204,7 +204,7 @@ public abstract class Actor extends AbstractActor {
     private Receive crashed() {
         return receiveBuilder()
                 .match(TwoPcRecoveryMessage.class, this::onTwoPcRecoveryMessage)
-                .matchAny(message -> LOGGER.warn("Actor {} on crashed received unmatched message: ", message))
+                .matchAny(message -> LOGGER.warn("Actor {} on crashed received unmatched message: {}", id, message))
                 .build();
     }
 
