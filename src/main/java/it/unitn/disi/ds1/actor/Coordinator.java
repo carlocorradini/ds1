@@ -165,7 +165,7 @@ public final class Coordinator extends Actor {
         // Communicate commit decision to Client
         final ActorMetadata client = transactionIdToClient.get(transactionId);
         final TxnEndResultMessage outMessageToClient = new TxnEndResultMessage(id, decision);
-        client.ref.tell(outMessageToClient, getSender());
+        client.ref.tell(outMessageToClient, getSelf());
         LOGGER.debug("Coordinator {} send to Client {} that transaction {} is {} TxnEndResultMessage: {}", id, client.id, transactionId, decision, outMessageToClient);
 
         // Clean resources
