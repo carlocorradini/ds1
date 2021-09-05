@@ -363,7 +363,7 @@ public final class DataStore extends Actor {
                 // Obtain private workspace of the transaction
                 final Map<Integer, Item> workspace = workspaces.get(message.transactionId);
                 // Commit
-                storage.putAll(workspaces.get(message.transactionId));
+                workspace.forEach((key, item) -> storage.put(key, new Item(item.getValue(), item.getVersion())));
                 LOGGER.info("DataStore {} successfully committed transaction {}: {}", id, message.transactionId, JsonUtil.GSON.toJson(workspace));
             }
         }
