@@ -331,7 +331,7 @@ public final class DataStore extends Actor {
         LOGGER.debug("DataStore {} send to Coordinator {} TwoPcVoteResultMessage: {}", id, message.senderId, outMessage);
 
         // Schedule timeout
-        timeout(message.transactionId, Config.TWOPC_VOTE_TIMEOUT_MS);
+        timeout(message.transactionId, Config.TWOPC_DATA_STORE_TIMEOUT_MS);
 
         // Crash before receiving decision from Coordinator
         if (Config.CRASH_DATA_STORE_DECISION) {
@@ -346,7 +346,7 @@ public final class DataStore extends Actor {
      * @param message Received message
      */
     private void onTwoPcDecisionMessage(TwoPcDecisionMessage message) {
-        LOGGER.debug("DataStore {} received from Coordinator {} to {} TwoPcDecisionMessage: {}", id, message.senderId, message.decision, message);
+        LOGGER.debug("DataStore {} received from Actor {} to {} TwoPcDecisionMessage: {}", id, message.senderId, message.decision, message);
         if(hasDecided(message.transactionId)) {
             LOGGER.warn("DataStore {} already decided to {} for transaction {}", id, finalDecisions.get(message.transactionId), message.transactionId);
             return;
@@ -436,7 +436,7 @@ public final class DataStore extends Actor {
                         // Ask coordinator
                         coordinator.ref.tell(outMessage, getSelf());
                         // Schedule timeout
-                        timeout(transactionId, Config.TWOPC_DECISION_TIMEOUT_MS);
+                        timeout(transactionId, Config.TWOPC_DATA_STORE_TIMEOUT_MS);
                         LOGGER.debug("DataStore {} is recovering and ask Coordinator {} for decision involving transaction {}: {}", id, coordinator.id, transactionId, outMessage);
                     } else {
                         // Already know the final decision

@@ -75,14 +75,14 @@ public final class Config implements Serializable {
 
     /**
      * 2PC {@link Coordinator} vote to {@link DataStore DataStore(s)} timeout (ms).
-     * 2PC {@link DataStore} vote response to {@link Coordinator} timeout (ms).
      */
-    public static final int TWOPC_VOTE_TIMEOUT_MS = 16000;
+    public static final int TWOPC_COORDINATOR_TIMEOUT_MS = 4000;
 
     /**
+     * 2PC {@link DataStore} vote response to {@link Coordinator} timeout (ms).
      * 2PC {@link DataStore} decision to {@link Coordinator} timeout (ms).
      */
-    public static final int TWOPC_DECISION_TIMEOUT_MS = 16000;
+    public static final int TWOPC_DATA_STORE_TIMEOUT_MS = 4000;
 
     /**
      * 2PC {@link it.unitn.disi.ds1.actor.Actor} recovery timeout (ms) after a crash.

@@ -146,7 +146,7 @@ public final class Coordinator extends Actor {
         // Communicate decision to all affected DataStore(s), if any
         final TwoPcDecisionMessage outMessageToDataStore = new TwoPcDecisionMessage(id, transactionId, decision);
         LOGGER.debug("Coordinator {} send to {} affected DataStore(s) to {} transaction {} TwoPcDecisionMessage: {}", id, affectedDataStores.size(), decision, transactionId, outMessageToDataStore);
-        if (!crash || !Config.CRASH_ENABLED) {
+        if (!crash || !Config.CRASH_ENABLED || (!Config.CRASH_COORDINATOR_DECISION_FIRST && !Config.CRASH_COORDINATOR_DECISION_ALL)) {
             // No crash
             multicast(affectedDataStores, outMessageToDataStore);
         } else if (Config.CRASH_COORDINATOR_DECISION_FIRST) {
@@ -340,12 +340,12 @@ public final class Coordinator extends Actor {
                     // DataStore(s) affected
 
                     // Schedule timeout
-                    timeout(transactionId, Config.TWOPC_VOTE_TIMEOUT_MS);
+                    timeout(transactionId, Config.TWOPC_COORDINATOR_TIMEOUT_MS);
 
                     // Send vote request to all affected DataStore(s) in transaction
                     final TwoPcVoteMessage outMessage = new TwoPcVoteMessage(id, transactionId, Decision.COMMIT);
                     LOGGER.debug("Coordinator {} send to {} affected DataStore(s) if can COMMIT transaction {} TwoPcVoteMessage: {}", id, affectedDataStores.size(), transactionId, outMessage);
-                    if (!Config.CRASH_ENABLED) {
+                    if (!Config.CRASH_ENABLED || (!Config.CRASH_COORDINATOR_VOTE_FIRST && !Config.CRASH_COORDINATOR_VOTE_ALL)) {
                         // No crash
                         multicast(affectedDataStores, outMessage);
                     } else if (Config.CRASH_COORDINATOR_VOTE_FIRST) {
@@ -397,7 +397,7 @@ public final class Coordinator extends Actor {
             LOGGER.info("Coordinator {} received from DataStore {} the vote to ABORT for transaction {}", id, message.senderId, message.transactionId);
             LOGGER.info("Coordinator {} decided to ABORT transaction {}", id, message.transactionId);
             decide(message.transactionId, Decision.ABORT);
-            terminateTransaction(message.transactionId);
+            terminateTransaction(message.transactionId, true);
             return;
         }
 
