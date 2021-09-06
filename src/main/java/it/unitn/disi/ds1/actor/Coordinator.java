@@ -105,6 +105,7 @@ public final class Coordinator extends Actor {
                 .match(TwoPcVoteResultMessage.class, this::onTwoPcVoteResultMessage)
                 .match(TwoPcDecisionRequestMessage.class, this::onTwoPcDecisionRequestMessage)
                 .match(TwoPcRecoveryMessage.class, this::onTwoPcRecoveryMessage)
+                .match(TwoPcTimeoutMessage.class, this::onTwoPcTimeoutMessage)
                 .match(SnapshotMessage.class, this::onSnapshotMessage)
                 .match(SnapshotResultMessage.class, this::onSnapshotResultMessage)
                 .build();
@@ -427,18 +428,16 @@ public final class Coordinator extends Actor {
      * @param message Received message
      */
     private void onTwoPcDecisionRequestMessage(TwoPcDecisionRequestMessage message) {
-        LOGGER.debug("Coordinator {} received from DataStore {} TwoPcDecisionRequest: {}", id, message.senderId, message);
+        LOGGER.debug("Coordinator {} received from DataStore {} TwoPcDecisionRequestMessage: {}", id, message.senderId, message);
 
         // Simulate delay
         sleep();
 
         // Check if it knows the final decision
         if (hasDecided(message.transactionId)) {
-            // Obtain decision
-            final Decision decision = finalDecisions.get(message.transactionId);
-            final TwoPcDecisionMessage outMessage = new TwoPcDecisionMessage(id, message.transactionId, decision);
-            getSender().tell(outMessage, getSelf());
-            LOGGER.debug("Coordinator {} send to DataStore {} during 2PC decision request TwoPcDecisionMessage: {}", id, message.senderId, outMessage);
+            LOGGER.debug("Coordinator {} DataStore {} does not know the final decision {}", id, message.senderId, finalDecisions.get(message.transactionId));
+            // Terminate transaction
+            terminateTransaction(message.transactionId);
         }
     }
 
@@ -476,7 +475,7 @@ public final class Coordinator extends Actor {
                 });
 
         // Terminate transaction(s)
-        for(final UUID transactionId: dataStoresAffectedInTransaction.keySet()) {
+        for (final UUID transactionId : dataStoresAffectedInTransaction.keySet()) {
             terminateTransaction(transactionId, Config.CRASH_COORDINATOR_ON_RECOVERY);
         }
     }
@@ -503,8 +502,7 @@ public final class Coordinator extends Actor {
             // Decide to ABORT
             decide(message.transactionId, Decision.ABORT);
             LOGGER.debug("Coordinator {} in timeout unilaterally ABORT for transaction {}", id, message.transactionId);
-
-            //Terminate transaction
+            // Terminate transaction
             terminateTransaction(message.transactionId, true);
         } else {
             final Decision decision = finalDecisions.get(message.transactionId);

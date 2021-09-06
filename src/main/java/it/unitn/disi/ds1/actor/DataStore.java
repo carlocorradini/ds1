@@ -347,7 +347,7 @@ public final class DataStore extends Actor {
      */
     private void onTwoPcDecisionMessage(TwoPcDecisionMessage message) {
         LOGGER.debug("DataStore {} received from Actor {} to {} TwoPcDecisionMessage: {}", id, message.senderId, message.decision, message);
-        if(hasDecided(message.transactionId)) {
+        if (hasDecided(message.transactionId)) {
             LOGGER.warn("DataStore {} already decided to {} for transaction {}", id, finalDecisions.get(message.transactionId), message.transactionId);
             return;
         }
@@ -413,10 +413,10 @@ public final class DataStore extends Actor {
         getContext().become(createReceive());
         LOGGER.info("DataStore {} recovering from crash", id);
 
+        // Fix final decision(s)
         workspaces
                 .keySet()
                 .forEach(transactionId -> {
-                    // Check if not voted
                     if (!transactionVotes.containsKey(transactionId)) {
                         // Not voted
                         LOGGER.debug("DataStore {} is recovering and has not voted yet for transaction {}", id, transactionId);
@@ -425,10 +425,8 @@ public final class DataStore extends Actor {
                         // Inform myself to ABORT as final decision
                         getSelf().tell(new TwoPcDecisionMessage(Message.NO_SENDER_ID, transactionId, Decision.ABORT), getSelf());
                         LOGGER.info("DataStore {} is recovering safely ABORT for transaction {}", id, transactionId);
-                    }
-
-                    // Check if not decided
-                    if (!hasDecided(transactionId)) {
+                    } else if (!hasDecided(transactionId)) {
+                        // Not decided
                         // Obtain coordinator
                         final ActorMetadata coordinator = transactionIdToCoordinator.get(transactionId);
                         // Out message
