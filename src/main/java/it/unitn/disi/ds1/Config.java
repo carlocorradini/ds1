@@ -87,7 +87,7 @@ public final class Config implements Serializable {
     /**
      * 2PC {@link it.unitn.disi.ds1.actor.Actor} recovery timeout (ms) after a crash.
      */
-    public final static int TWOPC_RECOVERY_TIMEOUT_MS = 320000;
+    public final static int TWOPC_RECOVERY_TIMEOUT_MS = 16000;
 
     /* --- Crash --- */
 
@@ -122,7 +122,7 @@ public final class Config implements Serializable {
     public static final boolean CRASH_DATA_STORE_VOTE = false;
 
     /**
-     * Crash {@link DataStore} before receiving {@link it.unitn.disi.ds1.message.twopc.TwoPcDecisionMessage 2PC decision message}.F
+     * Crash {@link DataStore} before receiving {@link it.unitn.disi.ds1.message.twopc.TwoPcDecisionMessage 2PC decision message}.
      */
     public static final boolean CRASH_DATA_STORE_DECISION = false;
 
