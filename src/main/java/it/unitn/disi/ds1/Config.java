@@ -75,6 +75,7 @@ public final class Config implements Serializable {
 
     /**
      * 2PC {@link Coordinator} vote to {@link DataStore DataStore(s)} timeout (ms).
+     * 2PC {@link DataStore} vote response to {@link Coordinator} timeout (ms).
      */
     public static final int TWOPC_VOTE_TIMEOUT_MS = 16000;
 

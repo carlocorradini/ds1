@@ -331,7 +331,7 @@ public final class DataStore extends Actor {
         LOGGER.debug("DataStore {} send to Coordinator {} TwoPcVoteResultMessage: {}", id, message.senderId, outMessage);
 
         // Schedule timeout
-        timeout(message.transactionId, Config.TWOPC_DECISION_TIMEOUT_MS);
+        timeout(message.transactionId, Config.TWOPC_VOTE_TIMEOUT_MS);
 
         // Crash before receiving decision from Coordinator
         if (Config.CRASH_DATA_STORE_DECISION) {
@@ -347,6 +347,10 @@ public final class DataStore extends Actor {
      */
     private void onTwoPcDecisionMessage(TwoPcDecisionMessage message) {
         LOGGER.debug("DataStore {} received from Coordinator {} to {} TwoPcDecisionMessage: {}", id, message.senderId, message.decision, message);
+        if(hasDecided(message.transactionId)) {
+            LOGGER.warn("DataStore {} already decided to {} for transaction {}", id, finalDecisions.get(message.transactionId), message.transactionId);
+            return;
+        }
 
         // Simulate delay
         sleep();

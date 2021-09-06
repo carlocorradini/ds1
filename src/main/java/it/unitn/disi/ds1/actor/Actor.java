@@ -106,7 +106,7 @@ public abstract class Actor extends AbstractActor {
             if (crash == Crash.AFTER_FIRST_MESSAGE) {
                 LOGGER.debug("Actor {} crash after first message sent to recipient {}: {}", id, recipient.id, message);
                 crash();
-                break;
+                return;
             }
         }
 

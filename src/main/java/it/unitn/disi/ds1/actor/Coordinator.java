@@ -458,12 +458,10 @@ public final class Coordinator extends Actor {
         getContext().become(createReceive());
         LOGGER.info("Coordinator {} recovering from crash", id);
 
+        // Fix final decision(s)
         dataStoresAffectedInTransaction
                 .keySet()
                 .forEach((transactionId) -> {
-                    // Final decision
-                    final Decision decision = finalDecisions.getOrDefault(transactionId, Decision.ABORT);
-
                     if (!hasDecided(transactionId)) {
                         // Crashed before final decision
                         LOGGER.debug("Coordinator {} is recovering and has not decided yet for transaction {}: ABORT", id, transactionId);
@@ -472,12 +470,15 @@ public final class Coordinator extends Actor {
                         decide(transactionId, Decision.ABORT);
                     } else {
                         // Crashed after final decision
+                        final Decision decision = finalDecisions.getOrDefault(transactionId, Decision.ABORT);
                         LOGGER.debug("Coordinator {} is recovering and has already decided for transaction {}: {}", id, transactionId, decision);
                     }
-
-                    // Terminate transaction
-                    terminateTransaction(transactionId, Config.CRASH_COORDINATOR_ON_RECOVERY);
                 });
+
+        // Terminate transaction(s)
+        for(final UUID transactionId: dataStoresAffectedInTransaction.keySet()) {
+            terminateTransaction(transactionId, Config.CRASH_COORDINATOR_ON_RECOVERY);
+        }
     }
 
 
