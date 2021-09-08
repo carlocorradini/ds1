@@ -34,7 +34,7 @@ public final class Config implements Serializable {
     public static final Mode MODE = Mode.AUTOMATIC;
 
     /**
-     * Maximum number of run(s) to process.
+     * Number of run(s) to process.
      * Used only when MODE is AUTOMATIC.
      */
     public static final int N_RUNS = 16;
