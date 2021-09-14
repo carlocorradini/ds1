@@ -5,6 +5,7 @@ import it.unitn.disi.ds1.util.JsonUtil;
 import it.unitn.disi.ds1.etc.ActorMetadata;
 
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -25,7 +26,7 @@ public final class DataStoreWelcomeMessage implements Serializable {
      * @param dataStores {@link it.unitn.disi.ds1.actor.DataStore DataStore(s)} metadata.
      */
     public DataStoreWelcomeMessage(List<ActorMetadata> dataStores) {
-        this.dataStores = dataStores;
+        this.dataStores = Collections.unmodifiableList(dataStores);
     }
 
     @Override
