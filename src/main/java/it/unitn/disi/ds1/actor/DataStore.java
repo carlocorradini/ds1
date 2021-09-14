@@ -124,7 +124,7 @@ public final class DataStore extends Actor {
      * @param transactionId {@link UUID Transaction} id
      * @return True if it can commit, false otherwise
      */
-    private synchronized boolean canCommit(UUID transactionId) {
+    private boolean canCommit(UUID transactionId) {
         if (!lockItems(transactionId)) {
             LOGGER.warn("DataStore {} lock Item(s) in transaction {} has FAILED: {}", id, transactionId, JsonUtil.GSON.toJson(workspaces.get(transactionId)));
             return false;
@@ -147,7 +147,7 @@ public final class DataStore extends Actor {
      * @param transactionId Transaction id
      * @return True if matched, false otherwise
      */
-    private synchronized boolean checkItemsVersion(UUID transactionId) {
+    private boolean checkItemsVersion(UUID transactionId) {
         return workspaces.get(transactionId)
                 .entrySet().stream()
                 .allMatch((entry) -> {
@@ -180,7 +180,7 @@ public final class DataStore extends Actor {
      * @param transactionId Transaction id
      * @return True if all {@link Item Item(s)} are successfully locked, false otherwise
      */
-    private synchronized boolean lockItems(UUID transactionId) {
+    private boolean lockItems(UUID transactionId) {
         // Obtain private workspace of the transaction
         final Map<Integer, Item> workspace = workspaces.get(transactionId);
 
@@ -199,7 +199,7 @@ public final class DataStore extends Actor {
      *
      * @param transactionId {@link UUID Transaction} id
      */
-    private synchronized void cleanLockItems(UUID transactionId) {
+    private void cleanLockItems(UUID transactionId) {
         workspaces.get(transactionId)
                 .forEach((key, value) -> storage.get(key).unlock(transactionId));
     }
@@ -363,13 +363,11 @@ public final class DataStore extends Actor {
 
         // If decision is to commit, let's commit
         if (message.decision == Decision.COMMIT) {
-            synchronized (this) {
-                // Obtain private workspace of the transaction
-                final Map<Integer, Item> workspace = workspaces.get(message.transactionId);
-                // Commit
-                workspace.forEach((key, item) -> storage.put(key, new Item(item.getValue(), item.getVersion())));
-                LOGGER.info("DataStore {} successfully committed transaction {}: {}", id, message.transactionId, JsonUtil.GSON.toJson(workspace));
-            }
+            // Obtain private workspace of the transaction
+            final Map<Integer, Item> workspace = workspaces.get(message.transactionId);
+            // Commit
+            workspace.forEach((key, item) -> storage.put(key, new Item(item.getValue(), item.getVersion())));
+            LOGGER.info("DataStore {} successfully committed transaction {}: {}", id, message.transactionId, JsonUtil.GSON.toJson(workspace));
         }
 
         // Clean resources

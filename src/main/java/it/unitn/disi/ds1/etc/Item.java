@@ -102,7 +102,7 @@ public final class Item {
      *
      * @return True if locked, false otherwise.
      */
-    public synchronized boolean isLocked() {
+    public boolean isLocked() {
         return locker != null;
     }
 
@@ -113,7 +113,7 @@ public final class Item {
      * @param locker {@link UUID Locker} to check
      * @return True if same locker, false otherwise
      */
-    public synchronized boolean isLocker(UUID locker) {
+    public boolean isLocker(UUID locker) {
         return isLocked() && this.locker.equals(locker);
     }
 
@@ -123,7 +123,7 @@ public final class Item {
      * @param locker {@link UUID Locker} trying to lock the Item
      * @return True if locked, false otherwise
      */
-    public synchronized boolean lock(UUID locker) {
+    public boolean lock(UUID locker) {
         // Check if Item is locked and the locker is different
         if (isLocked() && !isLocker(locker)) return false;
 
@@ -138,7 +138,7 @@ public final class Item {
      *
      * @param locker {@link UUID Locker} locking the Item
      */
-    public synchronized void unlock(UUID locker) {
+    public void unlock(UUID locker) {
         if (isLocker(locker)) this.locker = null;
     }
 
