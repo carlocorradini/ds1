@@ -26,7 +26,7 @@ public final class CoordinatorWelcomeMessage implements Serializable {
      * @param dataStores {@link it.unitn.disi.ds1.actor.DataStore DataStore(s)} metadata
      */
     public CoordinatorWelcomeMessage(List<ActorMetadata> dataStores) {
-        this.dataStores = Collections.unmodifiableList(dataStores);
+        this.dataStores = List.copyOf(dataStores);
     }
 
     @Override

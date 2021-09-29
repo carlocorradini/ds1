@@ -31,7 +31,7 @@ public final class Client extends AbstractActor {
     /**
      * Commit probability.
      */
-    private static final double COMMIT_PROBABILITY = 0.8;
+    private static final double COMMIT_PROBABILITY = 1;
 
     /**
      * Write probability.
@@ -41,12 +41,12 @@ public final class Client extends AbstractActor {
     /**
      * Minimum transactions.
      */
-    private static final int MIN_TXN_LENGTH = 20;
+    private static final int MIN_TXN_LENGTH = 8;
 
     /**
      * Maximum transactions.
      */
-    private static final int MAX_TXN_LENGTH = 40;
+    private static final int MAX_TXN_LENGTH = 15;
 
     /**
      * Random range.

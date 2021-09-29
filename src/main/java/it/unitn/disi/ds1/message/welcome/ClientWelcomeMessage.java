@@ -34,7 +34,7 @@ public final class ClientWelcomeMessage implements Serializable {
      * @param maxItemKey   Maximum {@link Item Item} key
      */
     public ClientWelcomeMessage(List<ActorMetadata> coordinators, int maxItemKey) {
-        this.coordinators = Collections.unmodifiableList(coordinators);
+        this.coordinators = List.copyOf(coordinators);
         this.maxItemKey = maxItemKey;
     }
 
