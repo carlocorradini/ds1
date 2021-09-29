@@ -164,10 +164,12 @@ public final class Coordinator extends Actor {
         if (crash && Config.CRASH_ENABLED) return;
 
         // Communicate commit decision to Client
-        final ActorMetadata client = transactionIdToClient.get(transactionId);
-        final TxnEndResultMessage outMessageToClient = new TxnEndResultMessage(id, decision);
-        client.ref.tell(outMessageToClient, getSelf());
-        LOGGER.debug("Coordinator {} send to Client {} that transaction {} is {} TxnEndResultMessage: {}", id, client.id, transactionId, decision, outMessageToClient);
+        transactionIdToClient.computeIfPresent(transactionId, (ignored, metadata) -> {
+            final TxnEndResultMessage outMessageToClient = new TxnEndResultMessage(id, decision);
+            metadata.ref.tell(outMessageToClient, getSelf());
+            LOGGER.debug("Coordinator {} send to Client {} that transaction {} is {} TxnEndResultMessage: {}", id, metadata.id, transactionId, decision, outMessageToClient);
+            return metadata;
+        });
 
         // Clean resources
         cleanResources(transactionId);
