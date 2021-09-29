@@ -121,10 +121,18 @@ public final class Coordinator extends Actor {
      */
     private ActorMetadata dataStoreByItemKey(int key) {
         final int dataStoreId = key / 10;
+        for (ActorMetadata metadata : dataStores) {
+            if (metadata.id == dataStoreId)
+                return metadata;
+        }
+        throw new NullPointerException(String.format("Coordinator %d is unable to obtain DataStore %d via Item key %d", id, dataStoreId, key));
+
+        /* TODO
         return dataStores.stream()
                 .filter(dataStore -> dataStore.id == dataStoreId)
                 .findFirst()
                 .orElseThrow(() -> new NullPointerException(String.format("Coordinator %d is unable to obtain DataStore %d via Item key %d", id, dataStoreId, key)));
+                */
     }
 
     /**
