@@ -191,9 +191,9 @@ public final class Coordinator extends Actor {
         if (transactionId == null) return;
 
         unTimeout(transactionId);
+        dataStoresAffectedInTransaction.remove(transactionId);
         transactionIdToClient.remove(transactionId);
         clientIdToTransactionId.values().remove(transactionId);
-        dataStoresAffectedInTransaction.remove(transactionId);
         transactionDecisions.remove(transactionId);
         LOGGER.trace("Coordinator {} clean resources involving transaction {}", id, transactionId);
     }
@@ -475,7 +475,7 @@ public final class Coordinator extends Actor {
                 });
 
         // Terminate transaction(s)
-        for (final UUID transactionId : dataStoresAffectedInTransaction.keySet()) {
+        for (final UUID transactionId : List.copyOf(dataStoresAffectedInTransaction.keySet())) {
             terminateTransaction(transactionId, Config.CRASH_COORDINATOR_ON_RECOVERY);
         }
     }

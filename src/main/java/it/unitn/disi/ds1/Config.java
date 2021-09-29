@@ -37,24 +37,24 @@ public final class Config implements Serializable {
      * Number of run(s) to process.
      * Used only when MODE is AUTOMATIC.
      */
-    public static final int N_RUNS = 16;
+    public static final int N_RUNS = 20;
 
     // --- Actor(s) ---
 
     /**
      * Number of {@link DataStore Data Store(s)}.
      */
-    public static final int N_DATA_STORES = 4;
+    public static final int N_DATA_STORES = 5;
 
     /**
      * Number of {@link Coordinator Coordinator(s)}.
      */
-    public static final int N_COORDINATORS = 8;
+    public static final int N_COORDINATORS = 5;
 
     /**
      * Number of {@link Client Client(s)}.
      */
-    public static final int N_CLIENTS = 16;
+    public static final int N_CLIENTS = 5;
 
     /**
      * Maximum item key index value.
@@ -66,28 +66,28 @@ public final class Config implements Serializable {
     /**
      * Minimum sleep timeout (ms).
      */
-    public static final int MIN_SLEEP_TIMEOUT_MS = 8;
+    public static final int MIN_SLEEP_TIMEOUT_MS = 0;
 
     /**
      * Maximum sleep timeout (ms).
      */
-    public static final int MAX_SLEEP_TIMEOUT_MS = 128;
+    public static final int MAX_SLEEP_TIMEOUT_MS = 2;
 
     /**
      * 2PC {@link Coordinator} vote to {@link DataStore DataStore(s)} timeout (ms).
      */
-    public static final int TWOPC_COORDINATOR_TIMEOUT_MS = 4000;
+    public static final int TWOPC_COORDINATOR_TIMEOUT_MS = 2000;
 
     /**
      * 2PC {@link DataStore} vote response to {@link Coordinator} timeout (ms).
      * 2PC {@link DataStore} decision to {@link Coordinator} timeout (ms).
      */
-    public static final int TWOPC_DATA_STORE_TIMEOUT_MS = 4000;
+    public static final int TWOPC_DATA_STORE_TIMEOUT_MS = 2000;
 
     /**
      * 2PC {@link it.unitn.disi.ds1.actor.Actor} recovery timeout (ms) after a crash.
      */
-    public final static int TWOPC_RECOVERY_TIMEOUT_MS = 16000;
+    public final static int TWOPC_RECOVERY_TIMEOUT_MS = 6000;
 
     /* --- Crash --- */
 
@@ -99,7 +99,7 @@ public final class Config implements Serializable {
     /**
      * Crash {@link Coordinator} after sending first {@link it.unitn.disi.ds1.message.twopc.TwoPcVoteMessage 2PC vote message}.
      */
-    public static final boolean CRASH_COORDINATOR_VOTE_FIRST = false;
+    public static final boolean CRASH_COORDINATOR_VOTE_FIRST = true;
 
     /**
      * Crash {@link Coordinator} after sending all {@link it.unitn.disi.ds1.message.twopc.TwoPcVoteMessage 2PC vote message(s)}.
